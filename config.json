@@ -8,71 +8,23 @@
 			"type":"match",
 			"regex":">(\\d+)</a></li><li class=\"next\">",
 			"action": [{
-				"type":"get",
-				"url":{
-					"pattern":"http://www.beautylegmm.com/index-%s.html",
-					"param":[{
-						"type":"range",
-						"width":1,
-						"start":1,
-						"end":{
-							"type":"regex",
-							"index":1
-						}
-					}]
+				"type":"print",
+				"pattern":"目录一共有%s页",
+				"param":[1]
+			},{
+				"type":"range",
+				"width":1,
+				"start":1,
+				"end":{
+					"index":1
 				},
 				"action":[{
-					"type":"matches",
-					"regex":"<a href=\"([^\"]+?)\" target=\"_blank\">\\[Beautyleg\\] 美腿寫真 No.(\\d+) (\\w+?) (\\d+)\\.\\d+\\.\\d+ \\[(\\d+)P\\]</a></div>",
-					"action":[{
-						"type":"download",
-						"url":{
-							"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
-							"param":[
-								{
-									"type":"regex",
-									"index":3						
-								},{
-									"type":"regex",
-									"index":1
-								},{
-									"type":"regex",
-									"index":1
-								},{
-									"type":"range",
-									"width":4,
-									"start":0,
-									"end":{
-										"type":"regex",
-										"index":4,
-										"offset":-1
-									}
-								},{
-									"type":"regex",
-									"index":2
-								}
-							]
-						},
-						"path":{
-							"pattern":"g:\\System Volume Information\\pic\\Beautyleg\\%s\\%s %s\\%s.jpg",
-							"param":[
-								{
-									"type":"param",
-									"index":1						
-								},{
-									"type":"param",
-									"index":2
-								},{
-									"type":"param",
-									"index":4
-								},{
-									"type":"param",
-									"index":3
-								}
-							]
-						}
-					}]
-				}]			
+					"type":"get",
+					"url:":{
+						"pattern":"http://www.beautylegmm.com/index-%s.html",
+						"param":[0]
+					}
+				}]
 			}]
 		}]
 	}]
