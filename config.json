@@ -6,7 +6,7 @@
 		},
 		"action":[{
 			"type":"match",
-			"regex":">(\\d+)</a></li><li class=\"next\">",
+			"pattern":">(\\d+)</a></li><li class=\"next\">",
 			"action": [{
 				"type":"print",
 				"pattern":"目录一共有%s页",
@@ -18,12 +18,50 @@
 				"end":{
 					"index":1
 				},
+				"parallel":1,
 				"action":[{
+					"type":"print",
+					"pattern":"下载第%s页",
+					"param":[2]
+				},{
 					"type":"get",
-					"url:":{
+					"url":{
 						"pattern":"http://www.beautylegmm.com/index-%s.html",
-						"param":[0]
-					}
+						"param":[2]
+					},
+					"action":[{
+						"type":"matches",
+						"pattern":"<div align=\"center\" class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">(.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\])</a></div>",
+						"action":[{
+							"type":"print",
+							"pattern":"%s\t%s\t%s\t%s\t%s\t%s",
+							"param":[2,1,5,3,4,6]
+						},{
+							"type":"range",
+							"width":4,
+							"start":0,
+							"end":{
+								"index":6,
+								"offset":-1
+							},
+							"action":[{
+								"type":"print",
+								"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
+								"param":[5,3,3,7]
+							},{
+								"type":"download",
+								"url":{
+									"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
+									"param":[5,3,3,7]
+								},
+								"path":{
+									"pattern":"G:\\BL\\%s\\%s %s\\%s.jpg",
+									"param":[5,3,4,7]
+								},
+								"exists":"skip"
+							}]
+						}]
+					}]
 				}]
 			}]
 		}]
