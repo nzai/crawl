@@ -218,7 +218,13 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 	}
 
 	//	下载
-	err = net.DownloadFile(parsedUrl, parsedPath)
+	buffer, err := net.DownloadBufferRetry(parsedUrl, 10, 10)
+	if err != nil {
+		return err
+	}
+
+	//	保存
+	err = io.WriteBytes(parsedPath, buffer)
 	if err != nil {
 		return err
 	}
@@ -289,12 +295,12 @@ func doRange(action map[string]interface{}, context interface{}) error {
 	_matches := context.([]string)
 	for index := start; index <= end; index++ {
 
+		chanSend <- 1
 		//	并发
 		go func(context []string, param string) {
 
 			matches := make([]string, 0)
-			matches = append(matches, context...)
-			matches = append(matches, param)
+			matches = append(context, param)
 
 			err = doNextAction(action, matches)
 			if err != nil {
@@ -304,8 +310,6 @@ func doRange(action map[string]interface{}, context interface{}) error {
 			<-chanSend
 			wg.Done()
 		}(_matches, fmt.Sprintf(widthPatter, index))
-
-		chanSend <- 1
 	}
 
 	return nil
