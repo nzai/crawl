@@ -7,8 +7,10 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"sync"
 
 	"github.com/nzai/crawl/config"
+	"github.com/nzai/go-utility/io"
 	"github.com/nzai/go-utility/net"
 )
 
@@ -116,12 +118,12 @@ func doGet(action map[string]interface{}, context interface{}) error {
 func doMatch(action map[string]interface{}, context interface{}) error {
 	log.Print("[Match]")
 
-	regex, found := action["regex"]
+	pattern, found := action["pattern"]
 	if !found {
-		return fmt.Errorf("错误的配置文件:match缺regex")
+		return fmt.Errorf("错误的配置文件:match缺pattern")
 	}
 
-	complied, err := regexp.Compile(regex.(string))
+	complied, err := regexp.Compile(pattern.(string))
 	if err != nil {
 		return err
 	}
@@ -134,12 +136,12 @@ func doMatch(action map[string]interface{}, context interface{}) error {
 func doMatches(action map[string]interface{}, context interface{}) error {
 	log.Print("[Matches]")
 
-	regex, found := action["regex"]
+	pattern, found := action["pattern"]
 	if !found {
-		return fmt.Errorf("错误的配置文件:matches缺regex")
+		return fmt.Errorf("错误的配置文件:matches缺pattern")
 	}
 
-	complied, err := regexp.Compile(regex.(string))
+	complied, err := regexp.Compile(pattern.(string))
 	if err != nil {
 		return err
 	}
@@ -159,7 +161,69 @@ func doMatches(action map[string]interface{}, context interface{}) error {
 func doDownload(action map[string]interface{}, context interface{}) error {
 	log.Print("[Download]")
 
-	return nil
+	//	url
+	_url, found := action["url"]
+	if !found {
+		return fmt.Errorf("[Download]缺少url配置:%v", action)
+	}
+	url := _url.(map[string]interface{})
+
+	//	url pattern
+	pattern, found := url["pattern"]
+	if !found {
+		return fmt.Errorf("错误的配置文件:url缺pattern")
+	}
+
+	param, err := parseIndexParameter(url, context)
+	if err != nil {
+		return err
+	}
+
+	//	url result
+	parsedUrl := fmt.Sprintf(pattern.(string), param...)
+
+	//	path
+	_path, found := action["path"]
+	if !found {
+		return fmt.Errorf("[Download]缺少path配置:%v", action)
+	}
+	path := _path.(map[string]interface{})
+
+	// url pattern
+	pattern, found = path["pattern"]
+	if !found {
+		return fmt.Errorf("错误的配置文件:path缺pattern")
+	}
+
+	param, err = parseIndexParameter(path, context)
+	if err != nil {
+		return err
+	}
+
+	//	path result
+	parsedPath := fmt.Sprintf(pattern.(string), param...)
+
+	//	exists
+	exists := "overwrite"
+	_exists, found := action["exists"]
+	if found {
+		exists = _exists.(string)
+	}
+
+	//	重复检测
+	if exists == "skip" {
+		if io.IsExists(parsedPath) {
+			return doNextAction(action, nil)
+		}
+	}
+
+	//	下载
+	err = net.DownloadFile(parsedUrl, parsedPath)
+	if err != nil {
+		return err
+	}
+
+	return doNextAction(action, nil)
 }
 
 func doPrint(action map[string]interface{}, context interface{}) error {
@@ -188,7 +252,7 @@ func doRange(action map[string]interface{}, context interface{}) error {
 		return fmt.Errorf("错误的配置文件:range param缺width")
 	}
 	width := int(_width.(float64))
-	widthPatter := fmt.Sprintf("%%%dd", width)
+	widthPatter := fmt.Sprintf("%%0%dd", width)
 
 	_start, found := action["start"]
 	if !found {
@@ -210,12 +274,38 @@ func doRange(action map[string]interface{}, context interface{}) error {
 		return err
 	}
 
+	parallel := 1
+	_parallel, found := action["parallel"]
+	if found {
+		parallel = int(_parallel.(float64))
+	}
+
+	chanSend := make(chan int, parallel)
+	defer close(chanSend)
+
+	var wg sync.WaitGroup
+	wg.Add(end - start + 1)
+
+	_matches := context.([]string)
 	for index := start; index <= end; index++ {
-		value := fmt.Sprintf(widthPatter, index)
-		err = doNextAction(action, []string{value})
-		if err != nil {
-			return err
-		}
+
+		//	并发
+		go func(context []string, param string) {
+
+			matches := make([]string, 0)
+			matches = append(matches, context...)
+			matches = append(matches, param)
+
+			err = doNextAction(action, matches)
+			if err != nil {
+				log.Printf("[Range]	发生错误:%s", err.Error())
+			}
+
+			<-chanSend
+			wg.Done()
+		}(_matches, fmt.Sprintf(widthPatter, index))
+
+		chanSend <- 1
 	}
 
 	return nil
@@ -252,7 +342,19 @@ func parseUrlRangeParameter(param interface{}, context interface{}) (int, error)
 	}
 
 	index := int(_index.(float64))
-	match := context.([]string)
 
-	return strconv.Atoi(match[index])
+	offset := 0
+	_offset, found := _param["offset"]
+	if found {
+		offset = int(_offset.(float64))
+	}
+
+	matches := context.([]string)
+
+	value, err := strconv.Atoi(matches[index])
+	if err != nil {
+		return 0, err
+	}
+
+	return value + offset, nil
 }
