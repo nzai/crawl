@@ -18,7 +18,7 @@
 				"end":{
 					"index":1
 				},
-				"parallel":4,
+				"parallel":8,
 				"action":[{
 					"type":"print",
 					"pattern":"下载第%s页",
@@ -44,7 +44,7 @@
 								"index":6,
 								"offset":-1
 							},
-							"parallel":8,
+							"parallel":16,
 							"action":[{
 								"type":"print",
 								"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
