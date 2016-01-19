@@ -87,7 +87,6 @@ func doAction(action map[string]interface{}, context interface{}) error {
 }
 
 func doGet(action map[string]interface{}, context interface{}) error {
-	log.Print("[Get]")
 
 	_url, found := action["url"]
 	if !found {
@@ -112,11 +111,12 @@ func doGet(action map[string]interface{}, context interface{}) error {
 		return err
 	}
 
+	log.Printf("[Get]\t%s", parsedUrl)
+
 	return doNextAction(action, html)
 }
 
 func doMatch(action map[string]interface{}, context interface{}) error {
-	log.Print("[Match]")
 
 	pattern, found := action["pattern"]
 	if !found {
@@ -129,12 +129,11 @@ func doMatch(action map[string]interface{}, context interface{}) error {
 	}
 
 	match := complied.FindStringSubmatch(context.(string))
-
+	log.Printf("[Match]\t%d", len(match))
 	return doNextAction(action, match)
 }
 
 func doMatches(action map[string]interface{}, context interface{}) error {
-	log.Print("[Matches]")
 
 	pattern, found := action["pattern"]
 	if !found {
@@ -147,7 +146,7 @@ func doMatches(action map[string]interface{}, context interface{}) error {
 	}
 
 	matches := complied.FindAllStringSubmatch(context.(string), -1)
-
+	log.Printf("[Matches]\t%d", len(matches))
 	for _, match := range matches {
 		err = doNextAction(action, match)
 		if err != nil {
@@ -159,7 +158,6 @@ func doMatches(action map[string]interface{}, context interface{}) error {
 }
 
 func doDownload(action map[string]interface{}, context interface{}) error {
-	log.Print("[Download]")
 
 	//	url
 	_url, found := action["url"]
@@ -229,11 +227,12 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 		return err
 	}
 
+	log.Printf("[Download]\t下载%s到%s", parsedUrl, parsedPath)
+
 	return doNextAction(action, nil)
 }
 
 func doPrint(action map[string]interface{}, context interface{}) error {
-	log.Print("[Print]")
 
 	pattern, found := action["pattern"]
 	if !found {
@@ -245,13 +244,12 @@ func doPrint(action map[string]interface{}, context interface{}) error {
 		return err
 	}
 
-	log.Printf("%s", fmt.Sprintf(pattern.(string), params...))
+	log.Printf("[Print]\t%s", fmt.Sprintf(pattern.(string), params...))
 
 	return doNextAction(action, context)
 }
 
 func doRange(action map[string]interface{}, context interface{}) error {
-	log.Print("[Range]")
 
 	_width, found := action["width"]
 	if !found {
@@ -297,19 +295,21 @@ func doRange(action map[string]interface{}, context interface{}) error {
 
 		chanSend <- 1
 		//	并发
-		go func(context []string, param string) {
+		go func(context []string, _index int) {
 
 			matches := make([]string, 0)
-			matches = append(context, param)
+			matches = append(context, fmt.Sprintf(widthPatter, _index))
 
 			err = doNextAction(action, matches)
 			if err != nil {
 				log.Printf("[Range]	发生错误:%s", err.Error())
 			}
 
+			log.Printf("[Range]\t%d/%d/%d", start, _index, end)
+
 			<-chanSend
 			wg.Done()
-		}(_matches, fmt.Sprintf(widthPatter, index))
+		}(_matches, index)
 	}
 
 	return nil
