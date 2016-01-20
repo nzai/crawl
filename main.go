@@ -200,6 +200,7 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 
 	//	path result
 	parsedPath := fmt.Sprintf(pattern.(string), param...)
+	tempPath := parsedPath + ".downloading"
 
 	//	exists
 	exists := "overwrite"
@@ -216,13 +217,13 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 	}
 
 	//	下载
-	buffer, err := net.DownloadBufferRetry(parsedUrl, 10, 10)
+	err = net.DownloadFileRetry(parsedUrl, tempPath, 10, 10)
 	if err != nil {
 		return err
 	}
 
-	//	保存
-	err = io.WriteBytes(parsedPath, buffer)
+	//	改名
+	err = os.Rename(tempPath, parsedPath)
 	if err != nil {
 		return err
 	}
@@ -311,6 +312,9 @@ func doRange(action map[string]interface{}, context interface{}) error {
 			wg.Done()
 		}(_matches, index)
 	}
+
+	//	阻塞，等待协程结束
+	wg.Wait()
 
 	return nil
 }
