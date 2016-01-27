@@ -18,7 +18,7 @@
 				"end":{
 					"index":1
 				},
-				"parallel":8,
+				"parallel":4,
 				"action":[{
 					"type":"print",
 					"pattern":"下载第%s页",
@@ -33,10 +33,6 @@
 						"type":"matches",
 						"pattern":"<div align=\"center\" class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">(.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\])</a></div>",
 						"action":[{
-							"type":"print",
-							"pattern":"%s\t%s\t%s\t%s\t%s\t%s",
-							"param":[2,1,5,3,4,6]
-						},{
 							"type":"range",
 							"width":4,
 							"start":0,
@@ -46,10 +42,6 @@
 							},
 							"parallel":16,
 							"action":[{
-								"type":"print",
-								"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
-								"param":[5,3,3,7]
-							},{
 								"type":"download",
 								"url":{
 									"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
