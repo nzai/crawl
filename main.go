@@ -102,13 +102,13 @@ func doGet(action map[string]interface{}, context interface{}) error {
 
 	param, err := parseIndexParameter(url, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析参数索引发生错误:%s", err.Error())
 	}
 
 	parsedUrl := fmt.Sprintf(pattern.(string), param...)
 	html, err := net.DownloadString(parsedUrl)
 	if err != nil {
-		return err
+		return fmt.Errorf("下载Html发生错误:%s", err.Error())
 	}
 
 	log.Printf("[Get]\t%s", parsedUrl)
@@ -125,7 +125,7 @@ func doMatch(action map[string]interface{}, context interface{}) error {
 
 	complied, err := regexp.Compile(pattern.(string))
 	if err != nil {
-		return err
+		return fmt.Errorf("编译正则表达式发生错误:%s", err.Error())
 	}
 
 	match := complied.FindStringSubmatch(context.(string))
@@ -142,7 +142,7 @@ func doMatches(action map[string]interface{}, context interface{}) error {
 
 	complied, err := regexp.Compile(pattern.(string))
 	if err != nil {
-		return err
+		return fmt.Errorf("编译正则表达式发生错误:%s", err.Error())
 	}
 
 	matches := complied.FindAllStringSubmatch(context.(string), -1)
@@ -174,7 +174,7 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 
 	param, err := parseIndexParameter(url, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析参数索引发生错误:%s", err.Error())
 	}
 
 	//	url result
@@ -195,12 +195,11 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 
 	param, err = parseIndexParameter(path, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析参数索引发生错误:%s", err.Error())
 	}
 
 	//	path result
 	parsedPath := fmt.Sprintf(pattern.(string), param...)
-	tempPath := parsedPath + ".downloading"
 
 	//	exists
 	exists := "overwrite"
@@ -217,15 +216,9 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 	}
 
 	//	下载
-	err = net.DownloadFileRetry(parsedUrl, tempPath, 10, 10)
+	err = net.DownloadFileRetry(parsedUrl, parsedPath, 10, 10)
 	if err != nil {
-		return err
-	}
-
-	//	改名
-	err = os.Rename(tempPath, parsedPath)
-	if err != nil {
-		return err
+		return fmt.Errorf("下载文件%s时发生错误:%s", parsedPath, err.Error())
 	}
 
 	log.Printf("[Download]\t下载%s到%s", parsedUrl, parsedPath)
@@ -242,7 +235,7 @@ func doPrint(action map[string]interface{}, context interface{}) error {
 
 	params, err := parseIndexParameter(action, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析参数索引发生错误:%s", err.Error())
 	}
 
 	log.Printf("[Print]\t%s", fmt.Sprintf(pattern.(string), params...))
@@ -266,7 +259,7 @@ func doRange(action map[string]interface{}, context interface{}) error {
 
 	start, err := parseUrlRangeParameter(_start, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析Url Range参数时发生错误:%s", err.Error())
 	}
 
 	_end, found := action["end"]
@@ -276,7 +269,7 @@ func doRange(action map[string]interface{}, context interface{}) error {
 
 	end, err := parseUrlRangeParameter(_end, context)
 	if err != nil {
-		return err
+		return fmt.Errorf("解析Url Range参数时发生错误:%s", err.Error())
 	}
 
 	parallel := 1
@@ -306,7 +299,7 @@ func doRange(action map[string]interface{}, context interface{}) error {
 				log.Printf("[Range]	发生错误:%s", err.Error())
 			}
 
-			log.Printf("[Range]\t%d/%d/%d", start, _index, end)
+//			log.Printf("[Range]\t%d/%d/%d", start, _index, end)
 
 			<-chanSend
 			wg.Done()
