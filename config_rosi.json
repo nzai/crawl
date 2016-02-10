@@ -39,7 +39,7 @@
 									"param":[1]
 								},
 								"path":{
-									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\d.jpg",
+									"pattern":"G:\\pic\\ROSI\\%s %s\\d.jpg",
 									"param":[1,2]
 								},
 								"exists":"skip"
@@ -58,7 +58,7 @@
 									"param":[1,1,4]
 								},
 								"path":{
-									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\%s.jpg",
+									"pattern":"G:\\pic\\ROSI\\%s %s\\%s.jpg",
 									"param":[1,2,4]
 								},
 								"exists":"skip"

@@ -2,11 +2,11 @@
 	"action":[{
 		"type":"get",
 		"url":{
-			"pattern":"http://www.beautylegmm.com/"
+			"pattern":"http://www.rosiyy.com/"
 		},
 		"action":[{
 			"type":"match",
-			"pattern":">(\\d+)</a></li><li class=\"next\">",
+			"pattern":">(\\d+)</a></li><li><a class=\"next",
 			"action": [{
 				"type":"print",
 				"pattern":"目录一共有%s页",
@@ -26,30 +26,40 @@
 				},{
 					"type":"get",
 					"url":{
-						"pattern":"http://www.beautylegmm.com/index-%s.html",
+						"pattern":"http://www.rosiyy.com/index-%s.html",
 						"param":[2]
 					},
 					"action":[{
 						"type":"matches",
-						"pattern":"<div align=\"center\" class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">(.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\])</a></div>",
+						"pattern":">【ROSI写真】第(\\d+)期_(.*?) \\[(\\d+)P\\]</a>",
 						"action":[{
+							"type":"download",
+								"url":{
+									"pattern":"http://www.rosiyy.com/photo/%s/d.jpg",
+									"param":[1]
+								},
+								"path":{
+									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\d.jpg",
+									"param":[1,2]
+								},
+								"exists":"skip"
+						},{
 							"type":"range",
-							"width":4,
-							"start":0,
+							"width":3,
+							"start":1,
 							"end":{
-								"index":6,
-								"offset":-1
+								"index":3
 							},
 							"parallel":16,
 							"action":[{
 								"type":"download",
 								"url":{
-									"pattern":"http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
-									"param":[5,3,3,7]
+									"pattern":"http://www.rosiyy.com/photo/%s/rosi-%s-%s.jpg",
+									"param":[1,1,4]
 								},
 								"path":{
-									"pattern":"G:\\BL\\%s\\%s %s\\%s.jpg",
-									"param":[5,3,4,7]
+									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\%s.jpg",
+									"param":[1,2,4]
 								},
 								"exists":"skip"
 							}]

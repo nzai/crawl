@@ -48,7 +48,7 @@
 									"param":[5,3,3,7]
 								},
 								"path":{
-									"pattern":"G:\\BL\\%s\\%s %s\\%s.jpg",
+									"pattern":"G:\\pic\\BeautylegMM\\%s\\%s %s\\%s.jpg",
 									"param":[5,3,4,7]
 								},
 								"exists":"skip"
