@@ -130,6 +130,10 @@ func doMatch(action map[string]interface{}, context interface{}) error {
 
 	match := complied.FindStringSubmatch(context.(string))
 	log.Printf("[Match]\t%d", len(match))
+	if len(match) == 0 {
+		return nil
+	}
+
 	return doNextAction(action, match)
 }
 
@@ -299,7 +303,7 @@ func doRange(action map[string]interface{}, context interface{}) error {
 				log.Printf("[Range]	发生错误:%s", err.Error())
 			}
 
-//			log.Printf("[Range]\t%d/%d/%d", start, _index, end)
+			//			log.Printf("[Range]\t%d/%d/%d", start, _index, end)
 
 			<-chanSend
 			wg.Done()
