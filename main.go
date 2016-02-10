@@ -225,7 +225,7 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 		return fmt.Errorf("下载文件%s时发生错误:%s", parsedPath, err.Error())
 	}
 
-	log.Printf("[Download]\t下载%s到%s", parsedUrl, parsedPath)
+	log.Printf("[Download]\t%s -> %s", parsedUrl, parsedPath)
 
 	return doNextAction(action, nil)
 }
@@ -355,6 +355,9 @@ func parseUrlRangeParameter(param interface{}, context interface{}) (int, error)
 	}
 
 	matches := context.([]string)
+	if index >= len(matches) {
+		return 0, fmt.Errorf("错误的配置文件:索引%d 超出matches长度%d", index, len(matches))
+	}
 
 	value, err := strconv.Atoi(matches[index])
 	if err != nil {

@@ -1,0 +1,72 @@
+{
+	"action":[{
+		"type":"get",
+		"url":{
+			"pattern":"http://www.rosiyy.com/"
+		},
+		"action":[{
+			"type":"match",
+			"pattern":">(\\d+)</a></li><li><a class=\"next",
+			"action": [{
+				"type":"print",
+				"pattern":"目录一共有%s页",
+				"param":[1]
+			},{
+				"type":"range",
+				"width":1,
+				"start":1,
+				"end":{
+					"index":1
+				},
+				"parallel":4,
+				"action":[{
+					"type":"print",
+					"pattern":"下载第%s页",
+					"param":[2]
+				},{
+					"type":"get",
+					"url":{
+						"pattern":"http://www.rosiyy.com/index-%s.html",
+						"param":[2]
+					},
+					"action":[{
+						"type":"matches",
+						"pattern":">【ROSI写真】第(\\d+)期_(.*?) \\[(\\d+)P\\]</a>",
+						"action":[{
+							"type":"download",
+								"url":{
+									"pattern":"http://www.rosiyy.com/photo/%s/d.jpg",
+									"param":[1]
+								},
+								"path":{
+									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\d.jpg",
+									"param":[1,2]
+								},
+								"exists":"skip"
+						},{
+							"type":"range",
+							"width":3,
+							"start":1,
+							"end":{
+								"index":3
+							},
+							"parallel":16,
+							"action":[{
+								"type":"download",
+								"url":{
+									"pattern":"http://www.rosiyy.com/photo/%s/rosi-%s-%s.jpg",
+									"param":[1,1,4]
+								},
+								"path":{
+									"pattern":"G:\\System Volume Information\\pic\\ROSI\\%s %s\\%s.jpg",
+									"param":[1,2,4]
+								},
+								"exists":"skip"
+							}]
+						}]
+					}]
+				}]
+			}]
+		}]
+	}]
+}

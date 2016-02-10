@@ -1,0 +1,72 @@
+{
+	"action":[{
+		"type":"get",
+		"url":{
+			"pattern":"http://www.disi365.com/"
+		},
+		"action":[{
+			"type":"match",
+			"pattern":">(\\d+)</a></li><li><a class=\"next",
+			"action": [{
+				"type":"print",
+				"pattern":"目录一共有%s页",
+				"param":[1]
+			},{
+				"type":"range",
+				"width":1,
+				"start":1,
+				"end":{
+					"index":1
+				},
+				"parallel":4,
+				"action":[{
+					"type":"print",
+					"pattern":"下载第%s页",
+					"param":[2]
+				},{
+					"type":"get",
+					"url":{
+						"pattern":"http://www.disi365.com/index-%s.html",
+						"param":[2]
+					},
+					"action":[{
+						"type":"matches",
+						"pattern":"<a class=\"blog_a\" href=\"http://www.disi365.com/\\d+\\.html\" title=\"【DISI写真】(\\d{4})-\\d{2}-\\d{2} NO\\.(\\d+)期  \\[(\\d+)P\\]\">",
+						"action":[{
+							"type":"download",
+								"url":{
+									"pattern":"http://www.disi365.com/photo/%s/d.jpg",
+									"param":[2]
+								},
+								"path":{
+									"pattern":"G:\\System Volume Information\\pic\\DISI\\%s\\%s\\d.jpg",
+									"param":[1,2]
+								},
+								"exists":"skip"
+						},{
+							"type":"range",
+							"width":3,
+							"start":1,
+							"end":{
+								"index":3
+							},
+							"parallel":16,
+							"action":[{
+								"type":"download",
+								"url":{
+									"pattern":"http://www.disi365.com/photo/%s/disi-%s-%s.jpg",
+									"param":[2,2,4]
+								},
+								"path":{
+									"pattern":"G:\\System Volume Information\\pic\\DISI\\%s\\%s\\%s.jpg",
+									"param":[1,2,4]
+								},
+								"exists":"skip"
+							}]
+						}]
+					}]
+				}]
+			}]
+		}]
+	}]
+}
