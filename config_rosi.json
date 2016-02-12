@@ -54,7 +54,7 @@
 							"action":[{
 								"type":"download",
 								"url":{
-									"pattern":"http://www.rosiyy.com/photo/%s/rosi-%s-%s.jpg",
+									"pattern":"http://www.rosiyy.com/photo/%s/rosimm-%s-%s.jpg",
 									"param":[1,1,4]
 								},
 								"path":{
