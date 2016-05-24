@@ -15,7 +15,8 @@
 				},
 				"action": [{
 					"type":"matches",
-					"pattern":"<img src=\"(.*?(\\d+)\\.jpg)\" alt=\"\\[(.*?)\\](.*?)(NO\\.\\d+)?第\\d+张\" /></a>",
+					"pattern":"<img src=\"(.*?(\\d+)\\.jpg)\" alt=\"\\[(.*?)\\]\\s*(.*?)\\s*(NO\\.\\d+)?第\\d+张\" /></a>",
+					
 					"action": [{
 						"type":"download",
 						"url":{
@@ -51,7 +52,7 @@
 							},
 							"action": [{
 								"type":"matches",
-								"pattern":"<img src=\"(.*?(\\d+)\\.jpg)\" alt=\"\\[(.*?)\\](.*?)(NO\\.\\d+)?第\\d+张\" /></a>",
+								"pattern":"<img src=\"(.*?(\\d+)\\.jpg)\" alt=\"\\[(.*?)\\]\\s*(.*?)\\s*(NO\\.\\d+)?第\\d+张\" /></a>",
 								"action": [{
 									"type":"download",
 									"url":{
