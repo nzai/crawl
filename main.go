@@ -129,7 +129,7 @@ func doMatch(action map[string]interface{}, context interface{}) error {
 	}
 
 	match := complied.FindStringSubmatch(context.(string))
-	log.Printf("[Match]\t%d", len(match))
+	//log.Printf("[Match]\t%d", len(match))
 	if len(match) == 0 {
 		return nil
 	}
@@ -150,7 +150,7 @@ func doMatches(action map[string]interface{}, context interface{}) error {
 	}
 
 	matches := complied.FindAllStringSubmatch(context.(string), -1)
-	log.Printf("[Matches]\t%d", len(matches))
+	//log.Printf("[Matches]\t%d", len(matches))
 	for _, match := range matches {
 		err = doNextAction(action, match)
 		if err != nil {
@@ -220,7 +220,7 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 	}
 
 	//	下载
-	err = net.DownloadFileRetry(parsedUrl, parsedPath, 10, 10)
+	err = net.DownloadFileRetry(parsedUrl, parsedPath, 5, 6)
 	if err != nil {
 		return fmt.Errorf("下载文件%s时发生错误:%s", parsedPath, err.Error())
 	}
@@ -288,6 +288,9 @@ func doRange(action map[string]interface{}, context interface{}) error {
 	var wg sync.WaitGroup
 	wg.Add(end - start + 1)
 
+	if context == nil {
+		context = []string{}
+	}
 	_matches := context.([]string)
 	for index := start; index <= end; index++ {
 
