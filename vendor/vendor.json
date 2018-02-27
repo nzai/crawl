@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "pymyZeVSKJqEZF1Vz2Arq0OTHac=",
+			"path": "github.com/nzai/go-utility/io",
+			"revision": "7eaf7de18d9f13f359bd03aa39afda4deadaa311",
+			"revisionTime": "2018-02-27T02:52:43Z"
+		},
+		{
+			"checksumSHA1": "ckxlFaNngkL0Ol8qiwA6Q/cGS3M=",
+			"path": "github.com/nzai/go-utility/net",
+			"revision": "7eaf7de18d9f13f359bd03aa39afda4deadaa311",
+			"revisionTime": "2018-02-27T02:52:43Z"
+		},
+		{
+			"checksumSHA1": "XfR5IQtDRmh510AWlSE2o84Ps9U=",
+			"path": "github.com/nzai/go-utility/path",
+			"revision": "7eaf7de18d9f13f359bd03aa39afda4deadaa311",
+			"revisionTime": "2018-02-27T02:52:43Z"
+		}
+	],
+	"rootPath": "github.com/nzai/crawl"
+}

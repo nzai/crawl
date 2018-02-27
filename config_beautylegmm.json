@@ -48,7 +48,7 @@
 									"param":[5,3,3,7]
 								},
 								"path":{
-									"pattern":"G:\\pic\\BeautylegMM\\%s\\%s %s\\%s.jpg",
+									"pattern":"/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
 									"param":[5,3,4,7]
 								},
 								"exists":"skip"

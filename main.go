@@ -220,7 +220,7 @@ func doDownload(action map[string]interface{}, context interface{}) error {
 	}
 
 	//	下载
-	err = net.DownloadFileRetry(parsedUrl, parsedPath, 5, 6)
+	err = net.DownloadFileRetry(parsedUrl, parsedPath, 3, 2)
 	if err != nil {
 		return fmt.Errorf("下载文件%s时发生错误:%s", parsedPath, err.Error())
 	}
