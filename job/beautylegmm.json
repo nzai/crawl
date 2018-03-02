@@ -1,0 +1,77 @@
+[{
+    "type":"get",
+    "parameters": {
+        "url": {
+            "type": "static",
+            "pattern": "http://www.beautylegmm.com/"            
+        },
+        "match": {
+            "type": "single",
+            "pattern": ">(\\d+)</a></li><li class=\"next\">",            
+            "key": ["totalPages"]
+        }
+    },
+    "actions": [{
+        "type": "range",
+        "parameter": {
+            "start": {
+                "type": "static",
+                "value": 1
+            },
+            "end": {
+                "type": "context",
+                "value": "totalPages"
+            },
+            "format": "%d",
+            "key": "currentPage",
+            "parallel": 16
+        },
+        "actions": [{
+            "type": "get",
+            "parameters": {
+                "url": {
+                    "type": "format",
+                    "pattern": "http://www.beautylegmm.com/index-%s.html",
+                    "key": ["currentPage"]
+                },
+                "match": {
+                    "type": "multi",
+                    "pattern": "<div align=\"center\" class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">(.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\])</a></div>",
+                    "key": ["url", "no", "title", "year", "pictures"]
+                }
+            },
+            "actions":[{
+                "type": "range",
+                "parameter": {
+                    "start": {
+                        "type": "static",
+                        "value": 0
+                    },
+                    "end": {
+                        "type": "context",
+                        "value": "totalPages",
+                        "offset": -1
+                    },
+                    "format": "%.4d",
+                    "key": "pictureIndex",
+                    "parallel": 16
+                },
+                "actions": [{
+                    "type": "download",
+                    "parameters": {
+                        "url": {
+                            "type": "format",
+                            "pattern": "http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
+                            "key": ["title", "pictureIndex", "year", "no"]
+                        },
+                        "path": {
+                            "type": "format",
+                            "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
+                            "key": ["year", "no", "title", "no"]
+                        }
+                    }
+                }]
+            }]
+        }]
+    }]
+}]
