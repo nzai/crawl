@@ -3,7 +3,7 @@
     "parameters": {
         "url": {
             "type": "static",
-            "pattern": "http://www.beautylegmm.com/"            
+            "value": "http://www.beautylegmm.com/"            
         },
         "match": {
             "type": "single",
