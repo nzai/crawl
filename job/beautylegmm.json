@@ -48,7 +48,7 @@
                     },
                     "actions":[{
                         "type": "range",
-                        "parameter": {
+                        "parameters": {
                             "start": {
                                 "type": "static",
                                 "value": 0
@@ -68,12 +68,12 @@
                                 "url": {
                                     "type": "format",
                                     "pattern": "http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
-                                    "key": ["title", "pictureIndex", "year", "no"]
+                                    "keys": ["title", "pictureIndex", "year", "no"]
                                 },
                                 "path": {
                                     "type": "format",
-                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
-                                    "key": ["year", "no", "title", "no"]
+                                    "pattern": "c:\\data\\bmm\\%s\\%s %s\\%s.jpg",
+                                    "keys": ["year", "no", "title", "no"]
                                 }
                             }
                         }]

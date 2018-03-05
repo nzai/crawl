@@ -9,31 +9,41 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
 	"github.com/nzai/go-utility/io"
 	"github.com/nzai/go-utility/net"
 )
 
+const (
+	defaultConfigFilePath = "config.json"
+)
+
 func main() {
 
-	log.Print("开始 >>>>>>>>>>>>")
-
-	filePath := ""
+	filePath := defaultConfigFilePath
 	if len(os.Args) > 1 {
 		filePath = os.Args[1]
 	}
 
-	cm, err := config.GetConfig(filePath)
+	configs, err := config.OpenFile(filePath)
 	if err != nil {
-		log.Fatalf("解析配置文件发生错误:%s", err.Error())
+		err1, success := err.(*errors.Error)
+		if success {
+			log.Fatal(err1.ErrorStack())
+		}
+		log.Fatal(err)
 	}
 
-	err = doNextAction(cm, nil)
+	crawl := NewCrawl()
+	err = crawl.Do(configs)
 	if err != nil {
-		log.Fatalf("执行操作发生错误:%s", err.Error())
+		err1, success := err.(*errors.Error)
+		if success {
+			log.Fatal(err1.ErrorStack())
+		}
+		log.Fatal(err)
 	}
-
-	log.Print(">>>>>>>>>>>> 结束")
 }
 
 func doNextAction(action map[string]interface{}, context interface{}) error {

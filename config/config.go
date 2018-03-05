@@ -3,18 +3,14 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"time"
+
+	"reflect"
 
 	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/context"
 	"github.com/nzai/go-utility/io"
-	"github.com/nzai/go-utility/path"
-)
-
-const (
-	defaultConfigFile = "config.json"
 )
 
 // Config 配置
@@ -28,16 +24,7 @@ func New(config map[string]interface{}) *Config {
 }
 
 // OpenFile 从文件中读取配置
-func OpenFile(filePath string) (*Config, error) {
-
-	if filePath == "" {
-		dir, err := path.GetStartupDir()
-		if err != nil {
-			return nil, err
-		}
-
-		filePath = filepath.Join(dir, defaultConfigFile)
-	}
+func OpenFile(filePath string) ([]*Config, error) {
 
 	if !io.IsExists(filePath) {
 		return nil, errors.Errorf("%s 不存在", filePath)
@@ -50,13 +37,24 @@ func OpenFile(filePath string) (*Config, error) {
 	}
 
 	//	解析配置项
-	var config map[string]interface{}
-	err = json.Unmarshal(buffer, &config)
+	var array []interface{}
+	err = json.Unmarshal(buffer, &array)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Config{config: config}, nil
+	configs := make([]*Config, len(array))
+	for index, item := range array {
+
+		config, ok := item.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("config is not a map[string]interface{}")
+		}
+
+		configs[index] = New(config)
+	}
+
+	return configs, nil
 }
 
 // Get 获取指定key的值
@@ -64,7 +62,7 @@ func (c Config) Get(key string) (interface{}, error) {
 
 	value, found := c.config[key]
 	if !found {
-		return "", errors.Errorf("key %s not found", key)
+		return "", errors.Errorf("key [%s] not found", key)
 	}
 
 	return value, nil
@@ -80,7 +78,7 @@ func (c Config) String(key string) (string, error) {
 
 	value, ok := v.(string)
 	if !ok {
-		return "", errors.Errorf("key %s value %+v is not a string", key, v)
+		return "", errors.Errorf("key [%s] value %+v is not a string", key, v)
 	}
 
 	return value, nil
@@ -94,12 +92,12 @@ func (c Config) Int(key string) (int, error) {
 		return 0, err
 	}
 
-	value, ok := v.(int)
+	value, ok := v.(float64)
 	if !ok {
-		return 0, errors.Errorf("key %s value %+v is not a int", key, v)
+		return 0, errors.Errorf("key [%s] value %+v is not a int, type:%s", key, v, reflect.TypeOf(v))
 	}
 
-	return value, nil
+	return int(value), nil
 }
 
 // Strings 获取指定key的字符串数组
@@ -110,12 +108,23 @@ func (c Config) Strings(key string) ([]string, error) {
 		return nil, err
 	}
 
-	value, ok := v.([]string)
+	array, ok := v.([]interface{})
 	if !ok {
-		return nil, errors.Errorf("key %s value %+v is not a string array", key, v)
+		return nil, errors.Errorf("key [%s] value %+v is not a array", key, v)
 	}
 
-	return value, nil
+	values := make([]string, len(array))
+	for index, value := range array {
+
+		stringValue, ok := value.(string)
+		if !ok {
+			return nil, errors.Errorf("key [%s] value %+v is not a string array", key, v)
+		}
+
+		values[index] = stringValue
+	}
+
+	return values, nil
 }
 
 // Config 获取指定key的配置
@@ -128,7 +137,7 @@ func (c Config) Config(key string) (*Config, error) {
 
 	value, ok := v.(map[string]interface{})
 	if !ok {
-		return nil, errors.Errorf("key %s value %+v is not a map[string]interface{}", key, v)
+		return nil, errors.Errorf("key [%s] value %+v is not a map[string]interface{}", key, v)
 	}
 
 	return New(value), nil
@@ -137,20 +146,14 @@ func (c Config) Config(key string) (*Config, error) {
 // Configs 获取指定key的配置队列
 func (c Config) Configs(key string) ([]*Config, error) {
 
-	var value interface{}
-	if key == "" {
-		value = c.config
-	} else {
-		v, err := c.Get(key)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+	value, err := c.Get(key)
+	if err != nil {
+		return nil, err
 	}
 
 	array, ok := value.([]interface{})
 	if !ok {
-		return nil, errors.Errorf("key %s value %+v is not a interface{} array", key, value)
+		return nil, errors.Errorf("key [%s] value %+v is not a interface{} array", key, value)
 	}
 
 	configs := make([]*Config, len(array))
@@ -158,7 +161,7 @@ func (c Config) Configs(key string) ([]*Config, error) {
 
 		config, ok := item.(map[string]interface{})
 		if !ok {
-			return nil, errors.Errorf("key %s value %+v is not a map[string]interface{}", key, value)
+			return nil, errors.Errorf("key [%s] value %+v is not a map[string]interface{}", key, value)
 		}
 
 		configs[index] = New(config)

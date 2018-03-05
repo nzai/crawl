@@ -1,0 +1,96 @@
+[{
+	"type":"get",
+    "parameters": {
+        "url": {
+            "type": "static",
+            "value": "https://www.aitaotu.com/tag/"            
+        },
+        "key": "frontpage"
+	},
+	"actions":[{
+		"type": "match",
+		"parameters": {
+			"key": "frontpage",
+			"pattern": "(?s)<dt>特征美女</dt>.*?<dd>(.*?)</dd>",
+			"keys": ["tags"]
+		},
+		"actions":[{
+			"type": "match",
+			"parameters": {
+				"key": "tags",
+				"pattern": "(?s)href=\"([^\\.]*?).html\">([^<]*?)</a>",
+				"keys": ["tagPath", "tagName"]
+			},
+			"actions":[{
+				"type":"get",
+				"parameters": {
+					"url": {
+						"type": "format",
+						"pattern": "https://www.aitaotu.com%s.html",
+						"keys": ["tagPath"]
+					},
+					"key": "tagPage"
+				},
+				"actions":[{
+					"type": "match",
+					"parameters": {
+						"key": "tagPage",
+						"pattern": "(?s)/(\\d+).html\">末页</a>",
+						"keys": ["tagPages"]
+					},
+					"actions":[{
+						"type": "print",
+						"parameters": {
+							"type": "format",
+							"pattern": "name:%s\tpath:%s\tpages:%s",
+							"keys": ["tagName", "tagPath", "tagPages"]
+						}
+					},{
+						"type": "range",
+                        "parameters": {
+                            "start": {
+                                "type": "static",
+                                "value": 1
+                            },
+                            "end": {
+                                "type": "context",
+                                "key": "tagPages",
+                                "offset": -1
+                            },
+                            "format": "%d",
+                            "key": "tagPageIndex",
+                            "parallel": 4
+						},
+						"actions":[{
+							"type":"get",
+							"parameters": {
+								"url": {
+									"type": "format",
+									"pattern": "https://www.aitaotu.com%s/%s.html",
+									"keys": ["tagPath", "tagPageIndex"]
+								},
+								"key": "tagPageOne"
+							},
+							"actions":[{
+								"type": "match",
+								"parameters": {
+									"key": "tagPageOne",
+									"pattern": "(?s)<a href=\"([^\"]*?)\" target=\"_blank\" title=\"([^\"]*?)\">",
+									"keys": ["sectionPage", "sectionTitle"]
+								},
+								"actions":[{
+									"type": "print",
+									"parameters": {
+										"type": "format",
+										"pattern": "name:%s\tsection:%s\tpath:https://www.aitaotu.com%s",
+										"keys": ["tagName", "sectionTitle", "sectionPage"]
+									}
+								}]
+							}]
+						}]
+					}]
+				}]
+			}]
+		}]
+	}]
+}]

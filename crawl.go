@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sync"
 	"time"
+
+	"strings"
 
 	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
@@ -17,6 +20,8 @@ const (
 	defaultRetry = 5
 	// defaultRetryInterval 缺省的重试间隔
 	defaultRetryInterval = time.Second * 5
+	// defaultParallel 缺省的并发数量(不并发)
+	defaultParallel = 1
 )
 
 // Crawl 抓取
@@ -29,20 +34,15 @@ func NewCrawl() *Crawl {
 }
 
 // Do 执行抓取
-func (s Crawl) Do(config *config.Config) error {
+func (s Crawl) Do(configs []*config.Config) error {
 
 	log.Print("开始 >>>>>>>>>>>>")
 	start := time.Now()
 	defer log.Printf(">>>>>>>>>>>> 结束 耗时:%s", time.Now().Sub(start).String())
 
-	configs, err := config.Configs("")
-	if err != nil {
-		return err
-	}
-
 	ctx := context.New()
 	for _, config := range configs {
-		err = s.do(config, ctx)
+		err := s.do(config, ctx)
 		if err != nil {
 			return err
 		}
@@ -52,9 +52,9 @@ func (s Crawl) Do(config *config.Config) error {
 }
 
 // do 执行操作
-func (s Crawl) do(config *config.Config, ctx *context.Context) error {
+func (s Crawl) do(conf *config.Config, ctx *context.Context) error {
 
-	action, err := config.Get("type")
+	action, err := conf.Get("type")
 	if err != nil {
 		return err
 	}
@@ -62,23 +62,33 @@ func (s Crawl) do(config *config.Config, ctx *context.Context) error {
 	switch action {
 	case "get":
 		// 抓取网页
-		return s.get(config, ctx)
+		return s.get(conf, ctx)
 	case "match":
 		// 匹配
-		return s.match(config, ctx)
+		return s.match(conf, ctx)
 	case "range":
 		// 循环
-		return s.forrange(config, ctx)
+		return s.forrange(conf, ctx)
+	case "download":
+		// 下载
+		return s.download(conf, ctx)
+	case "print":
+		// 显示
+		return s.print(conf, ctx)
 	default:
 		return errors.Errorf("unknown action type: %s", action)
 	}
 }
 
 // actions 执行后续操作
-func (s Crawl) actions(config *config.Config, ctx *context.Context) error {
+func (s Crawl) actions(conf *config.Config, ctx *context.Context) error {
 
-	configs, err := config.Configs("actions")
+	configs, err := conf.Configs("actions")
 	if err != nil {
+		if strings.HasSuffix(err.Error(), "not found") {
+			return nil
+		}
+
 		return err
 	}
 
@@ -93,9 +103,9 @@ func (s Crawl) actions(config *config.Config, ctx *context.Context) error {
 }
 
 // get 抓取网页并解析
-func (s Crawl) get(config *config.Config, ctx *context.Context) error {
+func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 
-	parameters, err := config.Config("parameters")
+	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
 	}
@@ -130,13 +140,13 @@ func (s Crawl) get(config *config.Config, ctx *context.Context) error {
 		return err
 	}
 
-	return s.actions(config, ctx)
+	return s.actions(conf, ctx)
 }
 
 // match 匹配
-func (s Crawl) match(config *config.Config, ctx *context.Context) error {
+func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
-	parameters, err := config.Config("parameters")
+	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
 	}
@@ -166,20 +176,22 @@ func (s Crawl) match(config *config.Config, ctx *context.Context) error {
 		return errors.Errorf("compile regex error: %+v", err)
 	}
 
-	matches := complied.FindAllStringSubmatch(html, -1)
-	for index, match := range matches {
+	groups := complied.FindAllStringSubmatch(html, -1)
+	for _, group := range groups {
 
-		if len(keys) != len(match) {
-			return errors.Errorf("match keys len %d is not equal matches len %d", len(keys), len(match))
+		if len(keys) != len(group)-1 {
+			return errors.Errorf("match keys len %d is not equal matches len %d", len(keys), len(group)-1)
 		}
 
 		cloneContext := ctx.Clone()
-		err = cloneContext.Set(keys[index], match[index])
-		if err != nil {
-			return err
+		for index, key := range keys {
+			err = cloneContext.Set(key, group[index+1])
+			if err != nil {
+				return err
+			}
 		}
 
-		err = s.actions(config, cloneContext)
+		err = s.actions(conf, cloneContext)
 		if err != nil {
 			return err
 		}
@@ -189,9 +201,9 @@ func (s Crawl) match(config *config.Config, ctx *context.Context) error {
 }
 
 // forrange 循环
-func (s Crawl) forrange(config *config.Config, ctx *context.Context) error {
+func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 
-	parameters, err := config.Config("parameters")
+	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
 	}
@@ -218,21 +230,93 @@ func (s Crawl) forrange(config *config.Config, ctx *context.Context) error {
 
 	parallel, err := parameters.Int("parallel")
 	if err != nil {
-		return err
+		parallel = defaultParallel
 	}
+
+	ch := make(chan bool, parallel)
+	wg := new(sync.WaitGroup)
+	wg.Add(end - start + 1)
 
 	for index := start; index < end; index++ {
 
-		err = ctx.Set(key, fmt.Sprintf(format, index))
-		if err != nil {
-			return err
-		}
+		go func(idx int) {
 
-		err = s.actions(config, ctx)
-		if err != nil {
-			return err
-		}
+			_context := ctx.Clone()
+
+			err = _context.Set(key, fmt.Sprintf(format, index))
+			if err != nil {
+				err1, success := err.(*errors.Error)
+				if success {
+					log.Fatal(err1.ErrorStack())
+				}
+				log.Fatal(err)
+			}
+
+			err = s.actions(conf, _context)
+			if err != nil {
+				err1, success := err.(*errors.Error)
+				if success {
+					log.Fatal(err1.ErrorStack())
+				}
+				log.Fatal(err)
+			}
+
+			<-ch
+			wg.Done()
+		}(index)
+
+		ch <- true
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// download 下载
+func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
+
+	parameters, err := conf.Config("parameters")
+	if err != nil {
+		return err
+	}
+
+	url, err := parameters.StringParameter("url", ctx)
+	if err != nil {
+		return err
+	}
+
+	path, err := parameters.StringParameter("path", ctx)
+	if err != nil {
+		return err
+	}
+
+	retry, err := parameters.Int("retry")
+	if err != nil {
+		retry = defaultRetry
+	}
+
+	interval, err := parameters.Duration("interval")
+	if err != nil {
+		interval = defaultRetryInterval
+	}
+
+	err = net.DownloadFileRetry(url, path, retry, interval)
+	if err != nil {
+		return errors.New(err)
 	}
 
 	return nil
+}
+
+// print 显示内容
+func (s Crawl) print(conf *config.Config, ctx *context.Context) error {
+
+	content, err := conf.StringParameter("parameters", ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Print(content)
+
+	return s.actions(conf, ctx)
 }
