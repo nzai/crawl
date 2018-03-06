@@ -84,6 +84,17 @@ func (c Config) String(key string) (string, error) {
 	return value, nil
 }
 
+// StringDefault 获取指定key的字符串值或缺省值
+func (c Config) StringDefault(key, defaultValue string) string {
+
+	value, err := c.String(key)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
 // Int 获取指定key的整形值
 func (c Config) Int(key string) (int, error) {
 
@@ -98,6 +109,71 @@ func (c Config) Int(key string) (int, error) {
 	}
 
 	return int(value), nil
+}
+
+// IntDefault 获取指定key的整形值或缺省值
+func (c Config) IntDefault(key string, defaultValue int) int {
+
+	value, err := c.Int(key)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
+// Bool 获取指定key的布尔值
+func (c Config) Bool(key string) (bool, error) {
+
+	v, err := c.Get(key)
+	if err != nil {
+		return false, err
+	}
+
+	value, ok := v.(bool)
+	if !ok {
+		return false, errors.Errorf("key [%s] value %+v is not a bool, type:%s", key, v, reflect.TypeOf(v))
+	}
+
+	return value, nil
+}
+
+// BoolDefault 获取指定key的布尔值或缺省值
+func (c Config) BoolDefault(key string, defaultValue bool) bool {
+
+	value, err := c.Bool(key)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
+// Duration 获取指定key的时间间隔
+func (c Config) Duration(key string) (time.Duration, error) {
+
+	value, err := c.String(key)
+	if err != nil {
+		return time.Nanosecond, err
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return time.Nanosecond, errors.New(err)
+	}
+
+	return duration, nil
+}
+
+// DurationDefault 获取指定key的时间间隔或缺省值
+func (c Config) DurationDefault(key string, defaultValue time.Duration) time.Duration {
+
+	value, err := c.Duration(key)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
 }
 
 // Strings 获取指定key的字符串数组
@@ -168,22 +244,6 @@ func (c Config) Configs(key string) ([]*Config, error) {
 	}
 
 	return configs, nil
-}
-
-// Duration 获取指定key的时间间隔
-func (c Config) Duration(key string) (time.Duration, error) {
-
-	value, err := c.String(key)
-	if err != nil {
-		return time.Nanosecond, err
-	}
-
-	duration, err := time.ParseDuration(value)
-	if err != nil {
-		return time.Nanosecond, errors.New(err)
-	}
-
-	return duration, nil
 }
 
 // StringParameter 解析字符串参数

@@ -12,6 +12,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
 	"github.com/nzai/crawl/context"
+	"github.com/nzai/go-utility/io"
 	"github.com/nzai/go-utility/net"
 )
 
@@ -22,6 +23,10 @@ const (
 	defaultRetryInterval = time.Second * 5
 	// defaultParallel 缺省的并发数量(不并发)
 	defaultParallel = 1
+	// defaultDebug 缺省不调试
+	defaultDebug = false
+	// defaultOverwrite 缺省不覆盖
+	defaultOverwrite = false
 )
 
 // Crawl 抓取
@@ -38,7 +43,6 @@ func (s Crawl) Do(configs []*config.Config) error {
 
 	log.Print("开始 >>>>>>>>>>>>")
 	start := time.Now()
-	defer log.Printf(">>>>>>>>>>>> 结束 耗时:%s", time.Now().Sub(start).String())
 
 	ctx := context.New()
 	for _, config := range configs {
@@ -47,6 +51,8 @@ func (s Crawl) Do(configs []*config.Config) error {
 			return err
 		}
 	}
+
+	log.Printf(">>>>>>>>>>>> 结束 耗时:%s", time.Now().Sub(start).String())
 
 	return nil
 }
@@ -115,21 +121,18 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
-	retry, err := parameters.Int("retry")
-	if err != nil {
-		retry = defaultRetry
-	}
-
-	interval, err := parameters.Duration("interval")
-	if err != nil {
-		interval = defaultRetryInterval
-	}
-
 	key, err := parameters.String("key")
 	if err != nil {
 		return err
 	}
 
+	retry := parameters.IntDefault("retry", defaultRetry)
+	interval := parameters.DurationDefault("interval", defaultRetryInterval)
+	debug := parameters.BoolDefault("debug", defaultDebug)
+
+	if debug {
+		log.Printf("[DEBUG]get - url:%s retry:%d interval:%s", url, retry, interval)
+	}
 	html, err := net.DownloadStringRetry(url, retry, interval)
 	if err != nil {
 		return err
@@ -138,6 +141,11 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 	err = ctx.Set(key, html)
 	if err != nil {
 		return err
+	}
+
+	if debug {
+		log.Printf("[DEBUG]get - key:%s", key)
+		log.Printf("[DEBUG]get - html:%s", html)
 	}
 
 	return s.actions(conf, ctx)
@@ -166,9 +174,16 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
-	html, err := ctx.Get(key)
+	input, err := ctx.Get(key)
 	if err != nil {
 		return err
+	}
+
+	debug := parameters.BoolDefault("debug", defaultDebug)
+
+	if debug {
+		log.Printf("[DEBUG]match - key:%s pattern:%s keys:%+v", key, pattern, keys)
+		log.Printf("[DEBUG]match - input:%s", input)
 	}
 
 	complied, err := regexp.Compile(pattern)
@@ -176,7 +191,7 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 		return errors.Errorf("compile regex error: %+v", err)
 	}
 
-	groups := complied.FindAllStringSubmatch(html, -1)
+	groups := complied.FindAllStringSubmatch(input, -1)
 	for _, group := range groups {
 
 		if len(keys) != len(group)-1 {
@@ -188,6 +203,10 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 			err = cloneContext.Set(key, group[index+1])
 			if err != nil {
 				return err
+			}
+
+			if debug {
+				log.Printf("[DEBUG]match - %s:%s", key, group[index+1])
 			}
 		}
 
@@ -228,18 +247,24 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
-	parallel, err := parameters.Int("parallel")
-	if err != nil {
-		parallel = defaultParallel
+	parallel := parameters.IntDefault("parallel", defaultParallel)
+	debug := parameters.BoolDefault("debug", defaultDebug)
+
+	if debug {
+		log.Printf("[DEBUG]range - start:%d end:%d parallel:%d", start, end, parallel)
 	}
 
 	ch := make(chan bool, parallel)
 	wg := new(sync.WaitGroup)
 	wg.Add(end - start + 1)
 
-	for index := start; index < end; index++ {
+	for index := start; index <= end; index++ {
 
 		go func(idx int) {
+
+			if debug {
+				log.Printf("[DEBUG]range - index:%d", idx)
+			}
 
 			_context := ctx.Clone()
 
@@ -290,14 +315,18 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
-	retry, err := parameters.Int("retry")
-	if err != nil {
-		retry = defaultRetry
+	retry := parameters.IntDefault("retry", defaultRetry)
+	interval := parameters.DurationDefault("interval", defaultRetryInterval)
+	overwrite := parameters.BoolDefault("overwrite", defaultOverwrite)
+	debug := parameters.BoolDefault("debug", defaultDebug)
+
+	if debug {
+		log.Printf("[DEBUG]download - url:%s path:%s retry:%d interval:%s overwrite:%v", url, path, retry, interval, overwrite)
 	}
 
-	interval, err := parameters.Duration("interval")
-	if err != nil {
-		interval = defaultRetryInterval
+	if io.IsExists(path) && !overwrite {
+		log.Printf("[DEBUG]download - path:%s exists", path)
+		return nil
 	}
 
 	err = net.DownloadFileRetry(url, path, retry, interval)
