@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
-
-	"strings"
 
 	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
 	"github.com/nzai/crawl/context"
-	"github.com/nzai/go-utility/io"
-	"github.com/nzai/go-utility/net"
 )
 
 const (
@@ -27,6 +28,8 @@ const (
 	defaultDebug = false
 	// defaultOverwrite 缺省不覆盖
 	defaultOverwrite = false
+	// defaultHTTPRequestTimeout 缺省的http请求超时
+	defaultHTTPRequestTimeout = time.Second * 10
 )
 
 // Crawl 抓取
@@ -128,12 +131,14 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 
 	retry := parameters.IntDefault("retry", defaultRetry)
 	interval := parameters.DurationDefault("interval", defaultRetryInterval)
+	timeout := parameters.DurationDefault("timeout", defaultHTTPRequestTimeout)
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
 		log.Printf("[DEBUG]get - url:%s retry:%d interval:%s", url, retry, interval)
 	}
-	html, err := net.DownloadStringRetry(url, retry, interval)
+
+	html, err := s.downloadHTML(url, retry, interval, timeout)
 	if err != nil {
 		return err
 	}
@@ -183,7 +188,6 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 	if debug {
 		log.Printf("[DEBUG]match - key:%s pattern:%s keys:%+v", key, pattern, keys)
-		log.Printf("[DEBUG]match - input:%s", input)
 	}
 
 	complied, err := regexp.Compile(pattern)
@@ -192,6 +196,10 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 	}
 
 	groups := complied.FindAllStringSubmatch(input, -1)
+	if debug {
+		log.Printf("[DEBUG]match - groups:%d", len(groups))
+	}
+
 	for _, group := range groups {
 
 		if len(keys) != len(group)-1 {
@@ -268,7 +276,7 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 
 			_context := ctx.Clone()
 
-			err = _context.Set(key, fmt.Sprintf(format, index))
+			err = _context.Set(key, fmt.Sprintf(format, idx))
 			if err != nil {
 				err1, success := err.(*errors.Error)
 				if success {
@@ -317,6 +325,7 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	retry := parameters.IntDefault("retry", defaultRetry)
 	interval := parameters.DurationDefault("interval", defaultRetryInterval)
+	timeout := parameters.DurationDefault("timeout", defaultHTTPRequestTimeout)
 	overwrite := parameters.BoolDefault("overwrite", defaultOverwrite)
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
@@ -324,17 +333,100 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 		log.Printf("[DEBUG]download - url:%s path:%s retry:%d interval:%s overwrite:%v", url, path, retry, interval, overwrite)
 	}
 
-	if io.IsExists(path) && !overwrite {
-		log.Printf("[DEBUG]download - path:%s exists", path)
+	_, err = os.Stat(path)
+	if err == nil && !overwrite {
+		if debug {
+			log.Printf("[DEBUG]download - path:%s exists", path)
+		}
+
 		return nil
 	}
 
-	err = net.DownloadFileRetry(url, path, retry, interval)
+	err = s.downloadFile(url, path, retry, interval, timeout)
+	if err != nil {
+		return errors.New(err)
+	}
+
+	log.Printf("[Download]\t%s -> %s", url, path)
+
+	return nil
+}
+
+// downloadHTML 下载html
+func (s Crawl) downloadHTML(url string, retry int, interval, timeout time.Duration) (string, error) {
+
+	rc, err := s.tryHTTPGet(url, retry, interval, timeout)
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	buffer, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return "", errors.New(err)
+	}
+
+	return string(buffer), nil
+}
+
+// downloadFile 下载文件
+func (s Crawl) downloadFile(url, path string, retry int, interval, timeout time.Duration) error {
+
+	rc, err := s.tryHTTPGet(url, retry, interval, timeout)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	tempPath := path + ".downloading"
+	file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, rc)
+	if err != nil {
+		return errors.New(err)
+	}
+
+	err = os.Rename(tempPath, path)
 	if err != nil {
 		return errors.New(err)
 	}
 
 	return nil
+}
+
+// tryHTTPGet 尝试http请求
+func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration) (io.ReadCloser, error) {
+
+	//	构造请求
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	//	发送请求
+	client := &http.Client{Timeout: timeout}
+	var response *http.Response
+	for times := retry - 1; times >= 0; times-- {
+
+		response, err = client.Do(request)
+		if err == nil {
+			break
+		}
+
+		if times == 0 {
+			return nil, errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+		}
+
+		// 延时重试
+		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+		time.Sleep(interval)
+	}
+
+	return response.Body, nil
 }
 
 // print 显示内容

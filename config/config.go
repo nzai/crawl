@@ -3,14 +3,15 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
+	"io/ioutil"
 	"reflect"
 
 	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/context"
-	"github.com/nzai/go-utility/io"
 )
 
 // Config 配置
@@ -26,12 +27,13 @@ func New(config map[string]interface{}) *Config {
 // OpenFile 从文件中读取配置
 func OpenFile(filePath string) ([]*Config, error) {
 
-	if !io.IsExists(filePath) {
+	_, err := os.Stat(filePath)
+	if err != nil {
 		return nil, errors.Errorf("%s 不存在", filePath)
 	}
 
 	//	读取文件
-	buffer, err := io.ReadAllBytes(filePath)
+	buffer, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}

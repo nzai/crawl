@@ -24,13 +24,12 @@
                 },
                 "end": {
                     "type": "context",
-                    "key": "tagPages",
-                    "offset": -1
+                    "key": "tagPages"
                 },
                 "format": "%d",
                 "key": "tagPageIndex",
-                "parallel": 1,
-                "debug": true
+                "parallel": 8,
+                "debug": false
             },
             "actions":[{
                 "type":"get",
@@ -48,7 +47,7 @@
                         "key": "tagPageOne",
                         "pattern": "(?s)<a class=\"Pli-litpic\" href=\"([^\"]*?)\" target=\"_blank\" title=\"([^\"]*?)\">[^<]*?<img data-original=\"([^\"]*?)\"",
                         "keys": ["sectionPage", "sectionTitle", "sectionFrontPicUrl"],
-                        "debug": true
+                        "debug": false
                     },
                     "actions":[{
                         "type":"download",
@@ -63,7 +62,7 @@
                                 "pattern": "/home/nzai/data/crawl/%s.jpg",
                                 "keys": ["sectionTitle"]
                             },
-                            "debug": true
+                            "debug": false
                         }
                     }]
                 }]
