@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -344,7 +345,7 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	err = s.downloadFile(url, path, retry, interval, timeout)
 	if err != nil {
-		return errors.New(err)
+		return err
 	}
 
 	log.Printf("[Download]\t%s -> %s", url, path)
@@ -378,10 +379,15 @@ func (s Crawl) downloadFile(url, path string, retry int, interval, timeout time.
 	}
 	defer rc.Close()
 
+	err = s.ensureDir(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+
 	tempPath := path + ".downloading"
 	file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return err
+		return errors.New(err)
 	}
 	defer file.Close()
 
@@ -398,13 +404,35 @@ func (s Crawl) downloadFile(url, path string, retry int, interval, timeout time.
 	return nil
 }
 
+// ensureDir 保证目录存在
+func (s Crawl) ensureDir(dir string) error {
+
+	_, err := os.Stat(dir)
+	if err == nil {
+		return nil
+	}
+
+	// 递推
+	err = s.ensureDir(filepath.Dir(dir))
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir(dir, 0755)
+	if err != nil {
+		return errors.New(err)
+	}
+
+	return nil
+}
+
 // tryHTTPGet 尝试http请求
 func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration) (io.ReadCloser, error) {
 
 	//	构造请求
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(err)
 	}
 
 	//	发送请求

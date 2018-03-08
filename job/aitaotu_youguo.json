@@ -1,0 +1,72 @@
+[{
+    "type":"get",
+    "parameters": {
+        "url": {
+            "type": "static",
+            "value": "https://www.aitaotu.com/tag/youguowang.html"
+        },
+        "key": "tagPage",
+        "debug": false
+    },
+    "actions":[{
+        "type": "match",
+        "parameters": {
+            "key": "tagPage",
+            "pattern": "(?s)/(\\d+).html\">末页</a>",
+            "keys": ["tagPages"]
+        },
+        "actions":[{
+            "type": "range",
+            "parameters": {
+                "start": {
+                    "type": "static",
+                    "value": 1
+                },
+                "end": {
+                    "type": "context",
+                    "key": "tagPages"
+                },
+                "format": "%d",
+                "key": "tagPageIndex",
+                "parallel": 8,
+                "debug": false
+            },
+            "actions":[{
+                "type":"get",
+                "parameters": {
+                    "url": {
+                        "type": "format",
+                        "pattern": "https://www.aitaotu.com/tag/youguowang/%s.html",
+                        "keys": ["tagPageIndex"]
+                    },
+                    "key": "tagPageOne"
+                },
+                "actions":[{
+                    "type": "match",
+                    "parameters": {
+                        "key": "tagPageOne",
+                        "pattern": "(?s)<a class=\"Pli-litpic\" href=\"([^\"]*?)\" target=\"_blank\" title=\"([^\"]*?)\">[^<]*?<img data-original=\"([^\"]*?)\"",
+                        "keys": ["sectionPage", "sectionTitle", "sectionFrontPicUrl"],
+                        "debug": false
+                    },
+                    "actions":[{
+                        "type":"download",
+                        "parameters": {
+                            "url": {
+                                "type": "format",
+                                "pattern": "%s",
+                                "keys": ["sectionFrontPicUrl"]
+                            },
+                            "path": {
+                                "type": "format",
+                                "pattern": "/home/nzai/data/pic/aitaotu/youguo/%s.jpg",
+                                "keys": ["sectionTitle"]
+                            },
+                            "debug": false
+                        }
+                    }]
+                }]
+            }]
+        }]
+    }]
+}]
