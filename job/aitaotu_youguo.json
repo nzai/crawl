@@ -3,17 +3,17 @@
     "parameters": {
         "url": {
             "type": "static",
-            "value": "https://www.aitaotu.com/tag/youguowang.html"
+            "value": "http://www.beautylegmm.com/"
         },
-        "key": "tagPage",
+        "key": "frontPage",
         "debug": false
     },
     "actions":[{
         "type": "match",
         "parameters": {
-            "key": "tagPage",
-            "pattern": "(?s)/(\\d+).html\">末页</a>",
-            "keys": ["tagPages"]
+            "key": "frontPage",
+            "pattern": "(?s)>(\\d+)</a></li><li class=\"next\">",
+            "keys": ["frontPages"]
         },
         "actions":[{
             "type": "range",
@@ -24,11 +24,11 @@
                 },
                 "end": {
                     "type": "context",
-                    "key": "tagPages"
+                    "key": "frontPages"
                 },
                 "format": "%d",
-                "key": "tagPageIndex",
-                "parallel": 8,
+                "key": "frontPageIndex",
+                "parallel": 4,
                 "debug": false
             },
             "actions":[{
@@ -36,34 +36,49 @@
                 "parameters": {
                     "url": {
                         "type": "format",
-                        "pattern": "https://www.aitaotu.com/tag/youguowang/%s.html",
-                        "keys": ["tagPageIndex"]
+                        "pattern": "http://www.beautylegmm.com/index-%s.html",
+                        "keys": ["frontPageIndex"]
                     },
-                    "key": "tagPageOne"
+                    "key": "frontPageHtml"
                 },
                 "actions":[{
                     "type": "match",
                     "parameters": {
-                        "key": "tagPageOne",
-                        "pattern": "(?s)<a class=\"Pli-litpic\" href=\"([^\"]*?)\" target=\"_blank\" title=\"([^\"]*?)\">[^<]*?<img data-original=\"([^\"]*?)\"",
-                        "keys": ["sectionPage", "sectionTitle", "sectionFrontPicUrl"],
+                        "key": "frontPageHtml",
+                        "pattern": "(?s)class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\]<",
+                        "keys": ["sectionPageUrl", "sectionNo", "sectionGirl", "sectionYear", "sectionPictures"],
                         "debug": false
                     },
                     "actions":[{
-                        "type":"download",
+                        "type": "range",
                         "parameters": {
-                            "url": {
-                                "type": "format",
-                                "pattern": "%s",
-                                "keys": ["sectionFrontPicUrl"]
+                            "start": {
+                                "type": "static",
+                                "value": 0
                             },
-                            "path": {
-                                "type": "format",
-                                "pattern": "/home/nzai/data/pic/aitaotu/youguo/%s.jpg",
-                                "keys": ["sectionTitle"]
+                            "end": {
+                                "type": "context",
+                                "key": "sectionPictures"
                             },
-                            "debug": false
-                        }
+                            "format": "%.4d",
+                            "key": "sectionIndex",
+                            "parallel": 16
+                        },
+                        "actions":[{
+                            "type":"download",
+                            "parameters": {
+                                "url": {
+                                    "type": "format",
+                                    "pattern": "http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
+                                    "keys": ["sectionYear","sectionNo","sectionNo","sectionIndex"]
+                                },
+                                "path": {
+                                    "type": "format",
+                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
+                                    "keys": ["sectionYear", "sectionNo", "sectionGirl", "sectionIndex"]
+                                }
+                            }
+                        }]
                     }]
                 }]
             }]

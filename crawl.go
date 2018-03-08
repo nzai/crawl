@@ -34,8 +34,7 @@ const (
 )
 
 // Crawl 抓取
-type Crawl struct {
-}
+type Crawl struct{}
 
 // NewCrawl 新建抓取
 func NewCrawl() *Crawl {
@@ -452,6 +451,10 @@ func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration
 		// 延时重试
 		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
 		time.Sleep(interval)
+	}
+
+	if response.StatusCode == http.StatusNotFound {
+		return nil, errors.Errorf("请求%s出错，文件不存在:%s", url, err.Error())
 	}
 
 	return response.Body, nil

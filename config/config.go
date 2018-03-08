@@ -329,6 +329,8 @@ func (c Config) formatInt(ctx *context.Context) (int, error) {
 		return 0, err
 	}
 
+	offset := c.IntDefault("offset", 0)
+
 	value, err := ctx.Get(key)
 	if err != nil {
 		return 0, err
@@ -339,5 +341,5 @@ func (c Config) formatInt(ctx *context.Context) (int, error) {
 		return 0, errors.New(err)
 	}
 
-	return intValue, nil
+	return intValue + offset, nil
 }
