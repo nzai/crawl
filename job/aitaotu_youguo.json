@@ -28,7 +28,7 @@
                 },
                 "format": "%d",
                 "key": "tagPageIndex",
-                "parallel": 8,
+                "parallel": 4,
                 "debug": false
             },
             "actions":[{
@@ -45,8 +45,8 @@
                     "type": "match",
                     "parameters": {
                         "key": "tagPageOne",
-                        "pattern": "(?s)class=\"Pli-litpic\" href=\"([^\"]*?)\" target",
-                        "keys": ["sectionPageUrl"],
+                        "pattern": "(?s)class=\"Pli-litpic\" href=\"(.*?/(\\d+).html)\" target",
+                        "keys": ["sectionPageUrl", "sectionGlobalIndex"],
                         "debug": false
                     },
                     "actions":[{
@@ -63,10 +63,63 @@
                             "type": "match",
                             "parameters": {
                                 "key": "sectionPageHtml",
-                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 .*? ([^<]*?)<\/h2>[\\s\\S]+?icons-addtime\"><\/i>发布时间：(\\d+)-(\\d+)-(\\d+)\\s",
-                                "keys": ["sectionNo", "sectionGirl", "sectionYear","sectionMonth","sectionDay"],
-                                "debug": true
-                            }
+                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 ([^<]*?)<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
+                                "keys": ["sectionNo", "sectionGirl", "sectionYear","sectionPages"],
+                                "debug": false
+                            },
+                            "actions":[{
+                                "type": "range",
+                                "parameters": {
+                                    "start": {
+                                        "type": "static",
+                                        "value": 1
+                                    },
+                                    "end": {
+                                        "type": "context",
+                                        "key": "sectionPages"
+                                    },
+                                    "format": "%d",
+                                    "key": "sectionPageIndex",
+                                    "parallel": 4,
+                                    "debug": false
+                                },
+                                "actions":[{
+                                    "type":"get",
+                                    "parameters": {
+                                        "url": {
+                                            "type": "format",
+                                            "pattern": "https://www.aitaotu.com/guonei/%s_%s.html",
+                                            "keys": ["sectionGlobalIndex", "sectionPageIndex"]
+                                        },
+                                        "key": "sectionIndexHtml"
+                                    },
+                                    "actions":[{
+                                        "type": "match",
+                                        "parameters": {
+                                            "key": "sectionIndexHtml",
+                                            "pattern": "(?s)><img src=\"(.*?\/(\\d+\\.\\w+))\" alt",
+                                            "keys": ["pictureUrl", "pictureFileName"],
+                                            "debug": false
+                                        },
+                                        "actions":[{
+                                            "type":"download",
+                                            "parameters": {
+                                                "url": {
+                                                    "type": "format",
+                                                    "pattern": "%s",
+                                                    "keys": ["pictureUrl"]
+                                                },
+                                                "path": {
+                                                    "type": "format",
+                                                    "pattern": "G:\\pic\\尤果网\\%s\\%s %s\\%s",
+                                                    "keys": ["sectionYear", "sectionNo", "sectionGirl", "pictureFileName"]
+                                                },
+                                                "debug": false
+                                            }
+                                        }]
+                                    }]
+                                }]
+                            }]
                         }]
                     }]
                 }]

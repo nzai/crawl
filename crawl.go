@@ -29,8 +29,6 @@ const (
 	defaultDebug = false
 	// defaultOverwrite 缺省不覆盖
 	defaultOverwrite = false
-	// defaultHTTPRequestTimeout 缺省的http请求超时
-	defaultHTTPRequestTimeout = time.Second * 10
 )
 
 // Crawl 抓取
@@ -131,14 +129,13 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 
 	retry := parameters.IntDefault("retry", defaultRetry)
 	interval := parameters.DurationDefault("interval", defaultRetryInterval)
-	timeout := parameters.DurationDefault("timeout", defaultHTTPRequestTimeout)
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
 		log.Printf("[DEBUG]get - url:%s retry:%d interval:%s", url, retry, interval)
 	}
 
-	html, err := s.downloadHTML(url, retry, interval, timeout)
+	html, err := s.downloadHTML(url, retry, interval)
 	if err != nil {
 		return err
 	}
@@ -186,9 +183,9 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
-	if debug {
-		log.Printf("[DEBUG]match - key:%s pattern:%s keys:%+v", key, pattern, keys)
-	}
+	// if debug {
+	// 	log.Printf("[DEBUG]match - key:%s pattern:%s keys:%+v", key, pattern, keys)
+	// }
 
 	complied, err := regexp.Compile(pattern)
 	if err != nil {
@@ -271,7 +268,7 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 		go func(idx int) {
 
 			if debug {
-				log.Printf("[DEBUG]range - index:%d", idx)
+				log.Printf("[DEBUG]range - %s:%d", key, idx)
 			}
 
 			_context := ctx.Clone()
@@ -325,7 +322,6 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	retry := parameters.IntDefault("retry", defaultRetry)
 	interval := parameters.DurationDefault("interval", defaultRetryInterval)
-	timeout := parameters.DurationDefault("timeout", defaultHTTPRequestTimeout)
 	overwrite := parameters.BoolDefault("overwrite", defaultOverwrite)
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
@@ -342,9 +338,15 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 		return nil
 	}
 
-	err = s.downloadFile(url, path, retry, interval, timeout)
+	tempPath := path + ".downloading"
+	err = s.downloadFile(url, tempPath, retry, interval)
 	if err != nil {
 		return err
+	}
+
+	err = os.Rename(tempPath, path)
+	if err != nil {
+		return errors.New(err)
 	}
 
 	log.Printf("[Download]\t%s -> %s", url, path)
@@ -353,9 +355,9 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 }
 
 // downloadHTML 下载html
-func (s Crawl) downloadHTML(url string, retry int, interval, timeout time.Duration) (string, error) {
+func (s Crawl) downloadHTML(url string, retry int, interval time.Duration) (string, error) {
 
-	rc, err := s.tryHTTPGet(url, retry, interval, timeout)
+	rc, err := s.tryHTTPGet(url, retry, interval)
 	if err != nil {
 		return "", err
 	}
@@ -370,9 +372,9 @@ func (s Crawl) downloadHTML(url string, retry int, interval, timeout time.Durati
 }
 
 // downloadFile 下载文件
-func (s Crawl) downloadFile(url, path string, retry int, interval, timeout time.Duration) error {
+func (s Crawl) downloadFile(url, path string, retry int, interval time.Duration) error {
 
-	rc, err := s.tryHTTPGet(url, retry, interval, timeout)
+	rc, err := s.tryHTTPGet(url, retry, interval)
 	if err != nil {
 		return err
 	}
@@ -383,19 +385,13 @@ func (s Crawl) downloadFile(url, path string, retry int, interval, timeout time.
 		return err
 	}
 
-	tempPath := path + ".downloading"
-	file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return errors.New(err)
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, rc)
-	if err != nil {
-		return errors.New(err)
-	}
-
-	err = os.Rename(tempPath, path)
 	if err != nil {
 		return errors.New(err)
 	}
@@ -426,7 +422,7 @@ func (s Crawl) ensureDir(dir string) error {
 }
 
 // tryHTTPGet 尝试http请求
-func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration) (io.ReadCloser, error) {
+func (s Crawl) tryHTTPGet(url string, retry int, interval time.Duration) (io.ReadCloser, error) {
 
 	//	构造请求
 	request, err := http.NewRequest("GET", url, nil)
@@ -435,7 +431,7 @@ func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration
 	}
 
 	//	发送请求
-	client := &http.Client{Timeout: timeout}
+	client := &http.Client{}
 	var response *http.Response
 	for times := retry - 1; times >= 0; times-- {
 
@@ -454,7 +450,7 @@ func (s Crawl) tryHTTPGet(url string, retry int, interval, timeout time.Duration
 	}
 
 	if response.StatusCode == http.StatusNotFound {
-		return nil, errors.Errorf("请求%s出错，文件不存在:%s", url, err.Error())
+		return nil, errors.Errorf("请求%s出错，文件不存在", url)
 	}
 
 	return response.Body, nil
