@@ -45,8 +45,8 @@
                     "type": "match",
                     "parameters": {
                         "key": "tagPageOne",
-                        "pattern": "(?s)<a class=\"Pli-litpic\" href=\"([^\"]*?)\" target=\"_blank\" title=\"([^\"]*?)\">[^<]*?<img data-original=\"([^\"]*?)\"",
-                        "keys": ["sectionPageUrl", "sectionTitle", "sectionFrontPicUrl"],
+                        "pattern": "(?s)class=\"Pli-litpic\" href=\"([^\"]*?)\" target",
+                        "keys": ["sectionPageUrl"],
                         "debug": false
                     },
                     "actions":[{
@@ -54,7 +54,7 @@
                         "parameters": {
                             "url": {
                                 "type": "format",
-                                "pattern": "%s",
+                                "pattern": "https://www.aitaotu.com%s",
                                 "keys": ["sectionPageUrl"]
                             },
                             "key": "sectionPageHtml"
@@ -63,27 +63,10 @@
                             "type": "match",
                             "parameters": {
                                 "key": "sectionPageHtml",
-                                "pattern": "(?s)><img src=\"([^\"]+?)\" alt",
-                                "keys": ["sectionPage", "sectionTitle", "sectionFrontPicUrl"],
-                                "debug": false
-                            },
-                            "actions":[{
-                                "type":"download",
-                                "parameters": {
-                                    "url": {
-                                        "type": "format",
-                                        "pattern": "%s",
-                                        "keys": ["sectionFrontPicUrl"]
-                                    },
-                                    "path": {
-                                        "type": "format",
-                                        "pattern": "/home/nzai/data/pic/aitaotu/youguo/%s.jpg",
-                                        "keys": ["sectionTitle"]
-                                    },
-                                    "timeout": "1m",
-                                    "debug": false
-                                }
-                            }]
+                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 .*? ([^<]*?)<\/h2>[\\s\\S]+?icons-addtime\"><\/i>发布时间：(\\d+)-(\\d+)-(\\d+)\\s",
+                                "keys": ["sectionNo", "sectionGirl", "sectionYear","sectionMonth","sectionDay"],
+                                "debug": true
+                            }
                         }]
                     }]
                 }]
