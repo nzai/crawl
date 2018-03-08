@@ -3,48 +3,51 @@
     "parameters": {
         "url": {
             "type": "static",
-            "value": "http://www.beautylegmm.com/"            
+            "value": "http://www.beautylegmm.com/"
         },
-        "key": "frontpage"
+        "key": "frontPage",
+        "debug": false
     },
-    "actions": [{
+    "actions":[{
         "type": "match",
         "parameters": {
-            "key": "frontpage",
-            "pattern": ">(\\d+)</a></li><li class=\"next\">",
-            "keys": ["totalPages"]
+            "key": "frontPage",
+            "pattern": "(?s)>(\\d+)</a></li><li class=\"next\">",
+            "keys": ["frontPages"]
         },
-        "actions": [{
+        "actions":[{
             "type": "range",
-            "parameter": {
+            "parameters": {
                 "start": {
                     "type": "static",
                     "value": 1
                 },
                 "end": {
                     "type": "context",
-                    "value": "totalPages"
+                    "key": "frontPages"
                 },
                 "format": "%d",
-                "key": "currentPage",
-                "parallel": 16
+                "key": "frontPageIndex",
+                "parallel": 4,
+                "debug": false
             },
-            "actions": [{
-                "type": "get",
+            "actions":[{
+                "type":"get",
                 "parameters": {
                     "url": {
                         "type": "format",
                         "pattern": "http://www.beautylegmm.com/index-%s.html",
-                        "keys": ["currentPage"]
+                        "keys": ["frontPageIndex"]
                     },
-                    "key": "page"
+                    "key": "frontPageHtml"
                 },
-                "actions": [{
+                "actions":[{
                     "type": "match",
                     "parameters": {
-                        "key": "page",
-                        "pattern": "<div align=\"center\" class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">(.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\])</a></div>",
-                        "keys": ["url", "no", "title", "year", "pictures"]
+                        "key": "frontPageHtml",
+                        "pattern": "(?s)class=\"post_weidaopic_title\"><a href=\"([^\"]*?)\" target=\"_blank\">.*?No.(\\d+) (\\w+) (\\d{4}).\\d{2}.\\d{2} \\[(\\d+)P\\]<",
+                        "keys": ["sectionPageUrl", "sectionNo", "sectionGirl", "sectionYear", "sectionPictures"],
+                        "debug": false
                     },
                     "actions":[{
                         "type": "range",
@@ -55,31 +58,30 @@
                             },
                             "end": {
                                 "type": "context",
-                                "value": "totalPages",
-                                "offset": -1
+                                "key": "sectionPictures"
                             },
                             "format": "%.4d",
-                            "key": "pictureIndex",
+                            "key": "sectionIndex",
                             "parallel": 16
                         },
-                        "actions": [{
-                            "type": "download",
+                        "actions":[{
+                            "type":"download",
                             "parameters": {
                                 "url": {
                                     "type": "format",
                                     "pattern": "http://www.beautylegmm.com/photo/beautyleg/%s/%s/beautyleg-%s-%s.jpg",
-                                    "keys": ["title", "pictureIndex", "year", "no"]
+                                    "keys": ["sectionYear","sectionNo","sectionNo","sectionIndex"]
                                 },
                                 "path": {
                                     "type": "format",
-                                    "pattern": "c:\\data\\bmm\\%s\\%s %s\\%s.jpg",
-                                    "keys": ["year", "no", "title", "no"]
+                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
+                                    "keys": ["sectionYear", "sectionNo", "sectionGirl", "sectionIndex"]
                                 }
                             }
                         }]
                     }]
-                }]                
+                }]
             }]
         }]
-    }]    
+    }]
 }]
