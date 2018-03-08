@@ -63,7 +63,7 @@
                             "type": "match",
                             "parameters": {
                                 "key": "sectionPageHtml",
-                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 ([^<]*?)<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
+                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 ([^<]*?)\\s*?<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
                                 "keys": ["sectionNo", "sectionGirl", "sectionYear","sectionPages"],
                                 "debug": false
                             },
