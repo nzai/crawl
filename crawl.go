@@ -29,6 +29,10 @@ const (
 	defaultDebug = false
 	// defaultOverwrite 缺省不覆盖
 	defaultOverwrite = false
+	// downloadingFileExt 正在下载的文件后缀
+	downloadingFileExt = ".downloading"
+	// downloadNotFoundFileExt 不存在的文件后缀
+	downloadNotFoundFileExt = ".404"
 )
 
 // Crawl 抓取
@@ -183,10 +187,6 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
-	// if debug {
-	// 	log.Printf("[DEBUG]match - key:%s pattern:%s keys:%+v", key, pattern, keys)
-	// }
-
 	complied, err := regexp.Compile(pattern)
 	if err != nil {
 		return errors.Errorf("compile regex error: %+v", err)
@@ -329,27 +329,10 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 		log.Printf("[DEBUG]download - url:%s path:%s retry:%d interval:%s overwrite:%v", url, path, retry, interval, overwrite)
 	}
 
-	_, err = os.Stat(path)
-	if err == nil && !overwrite {
-		if debug {
-			log.Printf("[DEBUG]download - path:%s exists", path)
-		}
-
-		return nil
-	}
-
-	tempPath := path + ".downloading"
-	err = s.downloadFile(url, tempPath, retry, interval)
+	err = s.downloadFile(url, path, retry, interval, overwrite)
 	if err != nil {
 		return err
 	}
-
-	err = os.Rename(tempPath, path)
-	if err != nil {
-		return errors.New(err)
-	}
-
-	log.Printf("[Download]\t%s -> %s", url, path)
 
 	return nil
 }
@@ -357,64 +340,154 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 // downloadHTML 下载html
 func (s Crawl) downloadHTML(url string, retry int, interval time.Duration) (string, error) {
 
-	rc, err := s.tryHTTPGet(url, retry, interval)
-	if err != nil {
-		return "", err
-	}
-	defer rc.Close()
+	var html string
+	var err error
+	var statusCode int
+	for times := retry - 1; times >= 0; times-- {
 
-	buffer, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return "", errors.New(err)
+		html, statusCode, err = s.tryDownloadHTML(url, retry, interval)
+		if err == nil {
+			if statusCode == http.StatusNotFound {
+				return "", errors.New("请求%s出错, 文件不存在")
+			}
+
+			break
+		}
+
+		if times == 0 {
+			return "", errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+		}
+
+		// 延时重试
+		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+		time.Sleep(interval)
 	}
 
-	return string(buffer), nil
+	return html, nil
+}
+
+// tryDownloadHTML 尝试下载html
+func (s Crawl) tryDownloadHTML(url string, retry int, interval time.Duration) (string, int, error) {
+
+	//	构造请求
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", 0, errors.New(err)
+	}
+
+	//	发送请求
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return "", 0, errors.New(err)
+	}
+	defer response.Body.Close()
+
+	buffer, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", 0, errors.New(err)
+	}
+
+	return string(buffer), response.StatusCode, nil
 }
 
 // downloadFile 下载文件
-func (s Crawl) downloadFile(url, path string, retry int, interval time.Duration) error {
+func (s Crawl) downloadFile(url, path string, retry int, interval time.Duration, overwrite bool) error {
 
-	rc, err := s.tryHTTPGet(url, retry, interval)
+	notFoundPath := path + downloadNotFoundFileExt
+	if (s.isExists(path) || s.isExists(notFoundPath)) && !overwrite {
+		return nil
+	}
+
+	err := s.ensureDir(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
 
-	err = s.ensureDir(filepath.Dir(path))
-	if err != nil {
-		return err
+	downloadingPath := path + downloadingFileExt
+	filePath := path
+	for times := retry - 1; times >= 0; times-- {
+
+		statusCode, err := s.tryDownloadFile(url, downloadingPath, retry, interval)
+		if err == nil {
+
+			if statusCode == http.StatusNotFound {
+				// 文件不存在
+				filePath = notFoundPath
+			}
+
+			err = os.Rename(downloadingPath, filePath)
+			if err == nil {
+				break
+			}
+
+			err = errors.New(err)
+		}
+
+		if times == 0 {
+			return errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+		}
+
+		// 延时重试
+		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+		time.Sleep(interval)
 	}
+
+	log.Printf("[Download]\t%s --> %s", url, filePath)
+
+	return nil
+}
+
+// tryDownloadFile 尝试下载文件
+func (s Crawl) tryDownloadFile(url, path string, retry int, interval time.Duration) (int, error) {
+
+	//	构造请求
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, errors.New(err)
+	}
+
+	//	发送请求
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return 0, errors.New(err)
+	}
+	defer response.Body.Close()
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return errors.New(err)
+		return 0, errors.New(err)
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, rc)
+	_, err = io.Copy(file, response.Body)
 	if err != nil {
-		return errors.New(err)
+		return 0, errors.New(err)
 	}
 
-	return nil
+	return response.StatusCode, nil
 }
 
 // ensureDir 保证目录存在
 func (s Crawl) ensureDir(dir string) error {
 
-	_, err := os.Stat(dir)
-	if err == nil {
+	if s.isExists(dir) {
 		return nil
 	}
 
 	// 递推
-	err = s.ensureDir(filepath.Dir(dir))
+	err := s.ensureDir(filepath.Dir(dir))
 	if err != nil {
 		return err
 	}
 
 	err = os.Mkdir(dir, 0755)
 	if err != nil {
+		if strings.Contains(err.Error(), "file exists") {
+			return nil
+		}
+
 		return errors.New(err)
 	}
 
@@ -454,6 +527,13 @@ func (s Crawl) tryHTTPGet(url string, retry int, interval time.Duration) (io.Rea
 	}
 
 	return response.Body, nil
+}
+
+// isExists 文件或目录是否存在
+func (s Crawl) isExists(path string) bool {
+
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // print 显示内容
