@@ -1,0 +1,129 @@
+[{
+    "type":"get",
+    "parameters": {
+        "url": {
+            "type": "static",
+            "value": "https://www.aitaotu.com/tag/ddy.html"
+        },
+        "key": "tagPage",
+        "debug": false
+    },
+    "actions":[{
+        "type": "match",
+        "parameters": {
+            "key": "tagPage",
+            "pattern": "(?s)/(\\d+).html\">末页</a>",
+            "keys": ["tagPages"]
+        },
+        "actions":[{
+            "type": "range",
+            "parameters": {
+                "start": {
+                    "type": "static",
+                    "value": 1
+                },
+                "end": {
+                    "type": "context",
+                    "key": "tagPages"
+                },
+                "format": "%d",
+                "key": "tagPageIndex",
+                "parallel": 4,
+                "debug": false
+            },
+            "actions":[{
+                "type":"get",
+                "parameters": {
+                    "url": {
+                        "type": "format",
+                        "pattern": "https://www.aitaotu.com/tag/ddy/%s.html",
+                        "keys": ["tagPageIndex"]
+                    },
+                    "key": "tagPageOne"
+                },
+                "actions":[{
+                    "type": "match",
+                    "parameters": {
+                        "key": "tagPageOne",
+                        "pattern": "(?s)class=\"Pli-litpic\" href=\"(.*?/(\\d+).html)\" target",
+                        "keys": ["sectionPageUrl", "sectionGlobalIndex"],
+                        "debug": false
+                    },
+                    "actions":[{
+                        "type":"get",
+                        "parameters": {
+                            "url": {
+                                "type": "format",
+                                "pattern": "https://www.aitaotu.com%s",
+                                "keys": ["sectionPageUrl"]
+                            },
+                            "key": "sectionPageHtml"
+                        },
+                        "actions":[{
+                            "type": "match",
+                            "parameters": {
+                                "key": "sectionPageHtml",
+                                "pattern": "(?s)<h2>\\[[^\\]]*?\\]\\s+?([^<]*?)\\s*?<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
+                                "keys": ["sectionGirl", "sectionYear","sectionPages"],
+                                "debug": false
+                            },
+                            "actions":[{
+                                "type": "range",
+                                "parameters": {
+                                    "start": {
+                                        "type": "static",
+                                        "value": 1
+                                    },
+                                    "end": {
+                                        "type": "context",
+                                        "key": "sectionPages"
+                                    },
+                                    "format": "%d",
+                                    "key": "sectionPageIndex",
+                                    "parallel": 4,
+                                    "debug": false
+                                },
+                                "actions":[{
+                                    "type":"get",
+                                    "parameters": {
+                                        "url": {
+                                            "type": "format",
+                                            "pattern": "https://www.aitaotu.com/guonei/%s_%s.html",
+                                            "keys": ["sectionGlobalIndex", "sectionPageIndex"]
+                                        },
+                                        "key": "sectionIndexHtml"
+                                    },
+                                    "actions":[{
+                                        "type": "match",
+                                        "parameters": {
+                                            "key": "sectionIndexHtml",
+                                            "pattern": "(?s)><img src=\"(.*?\/(\\d+\\.\\w+))\" alt",
+                                            "keys": ["pictureUrl", "pictureFileName"],
+                                            "debug": false
+                                        },
+                                        "actions":[{
+                                            "type":"download",
+                                            "parameters": {
+                                                "url": {
+                                                    "type": "format",
+                                                    "pattern": "%s",
+                                                    "keys": ["pictureUrl"]
+                                                },
+                                                "path": {
+                                                    "type": "format",
+                                                    "pattern": "G:\\pic\\DDY\\%s\\%s\\%s",
+                                                    "keys": ["sectionYear", "sectionGirl", "pictureFileName"]
+                                                },
+                                                "debug": false
+                                            }
+                                        }]
+                                    }]
+                                }]
+                            }]
+                        }]
+                    }]
+                }]
+            }]
+        }]
+    }]
+}]
