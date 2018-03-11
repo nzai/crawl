@@ -348,7 +348,7 @@ func (s Crawl) downloadHTML(url string, retry int, interval time.Duration) (stri
 		html, statusCode, err = s.tryDownloadHTML(url, retry, interval)
 		if err == nil {
 			if statusCode == http.StatusNotFound {
-				return "", errors.New("请求%s出错, 文件不存在")
+				return "", errors.Errorf("请求%s出错, 文件不存在", url)
 			}
 
 			break
