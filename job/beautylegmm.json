@@ -58,7 +58,8 @@
                             },
                             "end": {
                                 "type": "context",
-                                "key": "sectionPictures"
+                                "key": "sectionPictures",
+                                "offset": -1
                             },
                             "format": "%.4d",
                             "key": "sectionIndex",
@@ -74,7 +75,7 @@
                                 },
                                 "path": {
                                     "type": "format",
-                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
+                                    "pattern": "g:\\pic\\BeautylegMM\\%s\\%s %s\\%s.jpg",
                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "sectionIndex"]
                                 }
                             }

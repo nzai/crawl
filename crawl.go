@@ -484,7 +484,7 @@ func (s Crawl) ensureDir(dir string) error {
 
 	err = os.Mkdir(dir, 0755)
 	if err != nil {
-		if strings.Contains(err.Error(), "file exists") {
+		if strings.Contains(err.Error(), "exists") {
 			return nil
 		}
 
