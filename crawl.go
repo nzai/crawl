@@ -185,6 +185,7 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
+	parallel := parameters.IntDefault("parallel", defaultParallel)
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	complied, err := regexp.Compile(pattern)
@@ -197,29 +198,51 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 		log.Printf("[DEBUG]match - groups:%d", len(groups))
 	}
 
+	ch := make(chan bool, parallel)
+	wg := new(sync.WaitGroup)
+	wg.Add(len(groups))
+
 	for _, group := range groups {
 
 		if len(keys) != len(group)-1 {
 			return errors.Errorf("match keys len %d is not equal matches len %d", len(keys), len(group)-1)
 		}
 
-		cloneContext := ctx.Clone()
-		for index, key := range keys {
-			err = cloneContext.Set(key, group[index+1])
+		go func(_group []string) {
+
+			cloneContext := ctx.Clone()
+			for index, key := range keys {
+				err = cloneContext.Set(key, _group[index+1])
+				if err != nil {
+					err1, success := err.(*errors.Error)
+					if success {
+						log.Fatal(err1.ErrorStack())
+					}
+					log.Fatal(err)
+				}
+
+				if debug {
+					log.Printf("[DEBUG]match - %s:%s", key, _group[index+1])
+				}
+			}
+
+			err = s.actions(conf, cloneContext)
 			if err != nil {
-				return err
+				err1, success := err.(*errors.Error)
+				if success {
+					log.Fatal(err1.ErrorStack())
+				}
+				log.Fatal(err)
 			}
 
-			if debug {
-				log.Printf("[DEBUG]match - %s:%s", key, group[index+1])
-			}
-		}
+			<-ch
+			wg.Done()
 
-		err = s.actions(conf, cloneContext)
-		if err != nil {
-			return err
-		}
+		}(group)
+
+		ch <- true
 	}
+	wg.Wait()
 
 	return nil
 }
