@@ -20,6 +20,7 @@
 				"key": "tags",
 				"pattern": "(?s)href=\"([^\\.]*?).html\">([^<]*?)</a>",
 				"keys": ["tagUrl", "tagName"],
+				"parallel": 8,
 				"debug":true
 			},
 			"actions":[{
