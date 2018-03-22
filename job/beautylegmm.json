@@ -28,7 +28,7 @@
                 },
                 "format": "%d",
                 "key": "frontPageIndex",
-                "parallel": 4,
+                "parallel": 8,
                 "debug": false
             },
             "actions":[{
@@ -75,7 +75,7 @@
                                 },
                                 "path": {
                                     "type": "format",
-                                    "pattern": "g:\\pic\\BeautylegMM\\%s\\%s %s\\%s.jpg",
+                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "sectionIndex"]
                                 }
                             }

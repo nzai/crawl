@@ -111,7 +111,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "G:\\pic\\DDY\\%s\\%s\\%s",
+                                                    "pattern": "/home/nzai/data/pic/aitaotu/ddy/%s/%s/%s",
                                                     "keys": ["sectionYear", "sectionGirl", "pictureFileName"]
                                                 },
                                                 "debug": false

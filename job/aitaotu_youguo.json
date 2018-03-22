@@ -111,7 +111,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "G:\\pic\\尤果网\\%s\\%s %s\\%s",
+                                                    "pattern": "/home/nzai/data/pic/aitaotu/youguo/%s/%s %s/%s",
                                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "pictureFileName"]
                                                 },
                                                 "debug": false
