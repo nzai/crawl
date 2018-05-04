@@ -1,0 +1,92 @@
+[{
+    "type":"get",
+    "parameters": {
+        "url": {
+            "type": "static",
+            "value": "https://www.aitaotu.com/zt/siwa/"
+        },
+        "key": "tagPage",
+        "debug": false
+    },
+    "actions":[{
+        "type": "match",
+        "parameters": {
+            "key": "tagPage",
+            "pattern": "(?s)<dd>[\\s\\S]*?<a href=\"((.*?)\\.html)\" target=\"_blank\" title=\"([^\"]*?)\">",
+            "keys": ["sectionPageUrl", "sectionPageUrlPrefix", "sectionTitle"]
+        },
+        "actions":[{
+            "type":"get",
+            "parameters": {
+                "url": {
+                    "type": "format",
+                    "pattern": "https://www.aitaotu.com%s",
+                    "keys": ["sectionPageUrl"]
+                },
+                "key": "sectionPageHtml"
+            },            
+            "actions":[{
+                "type": "match",
+                "parameters": {
+                    "key": "sectionPageHtml",
+                    "pattern": "(?s)icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
+                    "keys": ["sectionYear","sectionPages"],
+                    "debug": false
+                },
+                "actions":[{
+                    "type": "range",
+                    "parameters": {
+                        "start": {
+                            "type": "static",
+                            "value": 1
+                        },
+                        "end": {
+                            "type": "context",
+                            "key": "sectionPages"
+                        },
+                        "format": "%d",
+                        "key": "sectionPageIndex",
+                        "parallel": 4,
+                        "debug": false
+                    },
+                    "actions":[{
+                        "type":"get",
+                        "parameters": {
+                            "url": {
+                                "type": "format",
+                                "pattern": "https://www.aitaotu.com%s_%s.html",
+                                "keys": ["sectionPageUrlPrefix", "sectionPageIndex"]
+                            },
+                            "key": "sectionPageHtml"
+                        },
+                        "actions":[{
+                            "type": "match",
+                            "parameters": {
+                                "key": "sectionPageHtml",
+                                "pattern": "(?s)><img src=\"(.*?\/(\\d+\\.\\w+))\" alt",
+                                "keys": ["pictureUrl", "pictureFileName"],
+                                "debug": false
+                            },
+                            "actions":[{
+                                "type":"download",
+                                "parameters": {
+                                    "url": {
+                                        "type": "format",
+                                        "pattern": "%s",
+                                        "keys": ["pictureUrl"]
+                                    },
+                                    "path": {
+                                        "type": "format",
+                                        "pattern": "/data/pic/aitaotu/zt/heisimeinv/%s/%s/%s",
+                                        "keys": ["sectionYear", "sectionTitle", "pictureFileName"]
+                                    },
+                                    "debug": false
+                                }
+                            }]
+                        }]
+                    }]
+                }]
+            }]
+        }]
+    }]
+}]
