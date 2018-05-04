@@ -77,7 +77,7 @@
                                     },
                                     "path": {
                                         "type": "format",
-                                        "pattern": "/home/nzai/data/pic/piaoliang/%s/%s %s/%s",
+                                        "pattern": "/data/pic/piaoliang/%s/%s %s/%s",
                                         "keys": ["sectionYear", "sectionNo", "sectionTitle", "sectionPictureFileName"]
                                     },
                                     "debug": false
@@ -126,7 +126,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "/home/nzai/data/pic/piaoliang/%s/%s %s/%s",
+                                                    "pattern": "/data/pic/piaoliang/%s/%s %s/%s",
                                                     "keys": ["sectionYear", "sectionNo", "sectionTitle", "pictureFileName"]
                                                 },
                                                 "debug": false

@@ -75,7 +75,7 @@
                                 },
                                 "path": {
                                     "type": "format",
-                                    "pattern": "/home/nzai/data/pic/bmm/%s/%s %s/%s.jpg",
+                                    "pattern": "/data/pic/bmm/%s/%s %s/%s.jpg",
                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "sectionIndex"]
                                 }
                             }

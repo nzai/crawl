@@ -111,7 +111,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "/home/nzai/data/pic/aitaotu/ddy/%s/%s/%s",
+                                                    "pattern": "/data/pic/aitaotu/ddy/%s/%s/%s",
                                                     "keys": ["sectionYear", "sectionGirl", "pictureFileName"]
                                                 },
                                                 "debug": false
