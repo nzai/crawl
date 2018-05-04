@@ -77,7 +77,7 @@
                                     },
                                     "path": {
                                         "type": "format",
-                                        "pattern": "/data/pic/aitaotu/zt/heisimeinv/%s/%s/%s",
+                                        "pattern": "/data/pic/aitaotu/heisimeinv/%s/%s/%s",
                                         "keys": ["sectionYear", "sectionTitle", "pictureFileName"]
                                     },
                                     "debug": false
