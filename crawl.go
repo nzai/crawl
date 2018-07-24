@@ -359,7 +359,7 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	err = s.downloadFile(url, referer, path, retry, interval, overwrite)
 	if err != nil {
-		return err
+		log.Printf("download file failed due to %v", err)
 	}
 
 	return nil
