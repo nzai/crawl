@@ -3,7 +3,7 @@
     "parameters": {
         "url": {
             "type": "static",
-            "value": "https://www.aitaotu.com/tag/ttns.html"
+            "value": "https://www.aitaotu.com/tag/qingdouke.html"
         },
         "key": "tagPage",
         "debug": false
@@ -28,7 +28,7 @@
                 },
                 "format": "%d",
                 "key": "tagPageIndex",
-                "parallel": 4,
+                "parallel": 2,
                 "debug": false
             },
             "actions":[{
@@ -36,7 +36,7 @@
                 "parameters": {
                     "url": {
                         "type": "format",
-                        "pattern": "https://www.aitaotu.com/tag/ttns/%s.html",
+                        "pattern": "https://www.aitaotu.com/tag/qingdouke/%s.html",
                         "keys": ["tagPageIndex"]
                     },
                     "key": "tagPageOne"
@@ -63,7 +63,7 @@
                             "type": "match",
                             "parameters": {
                                 "key": "sectionPageHtml",
-                                "pattern": "(?s)<h2>\\[[^\\]]*?\\].*?第(\\d+)期 ([^<]*?)\\s*?<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
+                                "pattern": "(?s)<h2>.*?(\\d+) ([^<]*?)\\s*?<\/h2>[\\s\\S]*?icons-addtime\"><\/i>发布时间：(\\d+)-\\d+-\\d+\\s[\\s\\S]*?_(\\d+)\\.html\">末页<",
                                 "keys": ["sectionNo", "sectionGirl", "sectionYear","sectionPages"],
                                 "debug": false
                             },
@@ -80,7 +80,7 @@
                                     },
                                     "format": "%d",
                                     "key": "sectionPageIndex",
-                                    "parallel": 4,
+                                    "parallel": 2,
                                     "debug": false
                                 },
                                 "actions":[{
@@ -116,7 +116,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "/data/pic/aitaotu/toutiao/%s/%s %s/%s",
+                                                    "pattern": "/data/pic/aitaotu/qingdouke/%s/%s %s/%s",
                                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "pictureFileName"]
                                                 },
                                                 "debug": false

@@ -338,6 +338,11 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 		return err
 	}
 
+	referer, err := parameters.StringParameter("referer", ctx)
+	if err != nil {
+		return err
+	}
+
 	path, err := parameters.StringParameter("path", ctx)
 	if err != nil {
 		return err
@@ -349,10 +354,10 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
-		log.Printf("[DEBUG]download - url:%s path:%s retry:%d interval:%s overwrite:%v", url, path, retry, interval, overwrite)
+		log.Printf("[DEBUG]download - url:%s referer:%s path:%s retry:%d interval:%s overwrite:%v", url, referer, path, retry, interval, overwrite)
 	}
 
-	err = s.downloadFile(url, path, retry, interval, overwrite)
+	err = s.downloadFile(url, referer, path, retry, interval, overwrite)
 	if err != nil {
 		return err
 	}
@@ -399,8 +404,7 @@ func (s Crawl) tryDownloadHTML(url string, retry int, interval time.Duration) (s
 	}
 
 	//	发送请求
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return "", 0, errors.New(err)
 	}
@@ -415,7 +419,7 @@ func (s Crawl) tryDownloadHTML(url string, retry int, interval time.Duration) (s
 }
 
 // downloadFile 下载文件
-func (s Crawl) downloadFile(url, path string, retry int, interval time.Duration, overwrite bool) error {
+func (s Crawl) downloadFile(url, referer, path string, retry int, interval time.Duration, overwrite bool) error {
 
 	notFoundPath := path + downloadNotFoundFileExt
 	if (s.isExists(path) || s.isExists(notFoundPath)) && !overwrite {
@@ -428,41 +432,34 @@ func (s Crawl) downloadFile(url, path string, retry int, interval time.Duration,
 	}
 
 	downloadingPath := path + downloadingFileExt
-	filePath := path
 	for times := retry - 1; times >= 0; times-- {
 
-		statusCode, err := s.tryDownloadFile(url, downloadingPath, retry, interval)
+		statusCode, err := s.tryDownloadFile(url, referer, downloadingPath, retry, interval)
 		if err == nil {
-
-			if statusCode == http.StatusNotFound {
-				// 文件不存在
-				filePath = notFoundPath
-			}
-
-			err = os.Rename(downloadingPath, filePath)
-			if err == nil {
-				break
-			}
-
-			err = errors.New(err)
+			log.Printf("[Download]\t%s --> %s", url, path)
+			return os.Rename(downloadingPath, path)
 		}
 
-		if times == 0 {
-			return errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
-		}
+		switch statusCode {
+		case http.StatusNotFound:
+			log.Printf("[Download]\t%s --> %s", url, notFoundPath)
+			return os.Rename(downloadingPath, notFoundPath)
+		default:
+			if times == 0 {
+				return errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+			}
 
-		// 延时重试
-		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
-		time.Sleep(interval)
+			// 延时重试
+			log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+			time.Sleep(interval)
+		}
 	}
-
-	log.Printf("[Download]\t%s --> %s", url, filePath)
 
 	return nil
 }
 
 // tryDownloadFile 尝试下载文件
-func (s Crawl) tryDownloadFile(url, path string, retry int, interval time.Duration) (int, error) {
+func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval time.Duration) (int, error) {
 
 	//	构造请求
 	request, err := http.NewRequest("GET", url, nil)
@@ -470,13 +467,21 @@ func (s Crawl) tryDownloadFile(url, path string, retry int, interval time.Durati
 		return 0, errors.New(err)
 	}
 
+	//	引用页
+	if referer != "" {
+		request.Header.Set("Referer", referer)
+	}
+
 	//	发送请求
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return 0, errors.New(err)
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return response.StatusCode, fmt.Errorf("status code: %d  text: %s  url: %s  referer: %s", response.StatusCode, http.StatusText(response.StatusCode), url, referer)
+	}
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -527,11 +532,10 @@ func (s Crawl) tryHTTPGet(url string, retry int, interval time.Duration) (io.Rea
 	}
 
 	//	发送请求
-	client := &http.Client{}
 	var response *http.Response
 	for times := retry - 1; times >= 0; times-- {
 
-		response, err = client.Do(request)
+		response, err = http.DefaultClient.Do(request)
 		if err == nil {
 			break
 		}

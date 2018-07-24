@@ -75,6 +75,11 @@
                                         "pattern": "%s",
                                         "keys": ["pictureUrl"]
                                     },
+                                    "referer": {
+                                        "type": "format",
+                                        "pattern": "https://www.aitaotu.com%s_%s.html",
+                                        "keys": ["sectionPageUrlPrefix", "sectionPageIndex"]
+                                    },
                                     "path": {
                                         "type": "format",
                                         "pattern": "/data/pic/aitaotu/heisimeinv/%s/%s/%s",

@@ -109,6 +109,11 @@
                                                     "pattern": "%s",
                                                     "keys": ["pictureUrl"]
                                                 },
+                                                "referer": {
+                                                    "type": "format",
+                                                    "pattern": "https://www.aitaotu.com/guonei/%s_%s.html",
+                                                    "keys": ["sectionGlobalIndex", "sectionPageIndex"]
+                                                },
                                                 "path": {
                                                     "type": "format",
                                                     "pattern": "/data/pic/aitaotu/aiss/%s/%s %s/%s",
