@@ -3,7 +3,7 @@
     "parameters": {
         "url": {
             "type": "static",
-            "value": "https://www.aitaotu.com/tag/qingdouke.html"
+            "value": "https://www.aitaotu.com/tag/meituibaobei.html"
         },
         "key": "tagPage",
         "debug": false
@@ -36,7 +36,7 @@
                 "parameters": {
                     "url": {
                         "type": "format",
-                        "pattern": "https://www.aitaotu.com/tag/qingdouke/%s.html",
+                        "pattern": "https://www.aitaotu.com/tag/meituibaobei/%s.html",
                         "keys": ["tagPageIndex"]
                     },
                     "key": "tagPageOne"
@@ -116,7 +116,7 @@
                                                 },
                                                 "path": {
                                                     "type": "format",
-                                                    "pattern": "/data/pic/aitaotu/qingdouke/%s/%s %s/%s",
+                                                    "pattern": "/data/pic/aitaotu/meituibaobei/%s/%s %s/%s",
                                                     "keys": ["sectionYear", "sectionNo", "sectionGirl", "pictureFileName"]
                                                 },
                                                 "debug": false
