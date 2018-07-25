@@ -340,7 +340,7 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	referer, err := parameters.StringParameter("referer", ctx)
 	if err != nil {
-		return err
+		referer = ""
 	}
 
 	path, err := parameters.StringParameter("path", ctx)
