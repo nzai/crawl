@@ -1,6 +1,9 @@
 package context
 
-import "github.com/go-errors/errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Context 上下文
 type Context struct {
@@ -14,7 +17,6 @@ func New() *Context {
 
 // Clone 克隆
 func (c Context) Clone() *Context {
-
 	context := New()
 	for key, value := range c.context {
 		context.Set(key, value)
@@ -25,22 +27,19 @@ func (c Context) Clone() *Context {
 
 // Set 设置值
 func (c *Context) Set(key, value string) error {
-
 	if key == "" {
 		return errors.New("key is empty")
 	}
 
 	c.context[key] = value
-
 	return nil
 }
 
 // Get 获取指定key的值
 func (c Context) Get(key string) (string, error) {
-
 	value, found := c.context[key]
 	if !found {
-		return "", errors.Errorf("key %s not found", key)
+		return "", fmt.Errorf("key %s not found", key)
 	}
 
 	return value, nil

@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,9 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
 	"github.com/nzai/crawl/context"
+	"go.uber.org/zap"
+
+	"github.com/nzai/netop"
 )
 
 const (
@@ -45,8 +45,7 @@ func NewCrawl() *Crawl {
 
 // Do 执行抓取
 func (s Crawl) Do(configs []*config.Config) error {
-
-	log.Print("开始 >>>>>>>>>>>>")
+	zap.L().Info("start")
 	start := time.Now()
 
 	ctx := context.New()
@@ -57,14 +56,12 @@ func (s Crawl) Do(configs []*config.Config) error {
 		}
 	}
 
-	log.Printf(">>>>>>>>>>>> 结束 耗时:%s", time.Now().Sub(start).String())
-
+	zap.L().Info("[END]", zap.Duration("in", time.Now().Sub(start)))
 	return nil
 }
 
 // do 执行操作
 func (s Crawl) do(conf *config.Config, ctx *context.Context) error {
-
 	action, err := conf.Get("type")
 	if err != nil {
 		return err
@@ -87,13 +84,12 @@ func (s Crawl) do(conf *config.Config, ctx *context.Context) error {
 		// 显示
 		return s.print(conf, ctx)
 	default:
-		return errors.Errorf("unknown action type: %s", action)
+		return fmt.Errorf("unknown action type: %s", action)
 	}
 }
 
 // actions 执行后续操作
 func (s Crawl) actions(conf *config.Config, ctx *context.Context) error {
-
 	configs, err := conf.Configs("actions")
 	if err != nil {
 		if strings.HasSuffix(err.Error(), "not found") {
@@ -115,7 +111,6 @@ func (s Crawl) actions(conf *config.Config, ctx *context.Context) error {
 
 // get 抓取网页并解析
 func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
-
 	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
@@ -136,7 +131,7 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
-		log.Printf("[DEBUG]get - url:%s retry:%d interval:%s", url, retry, interval)
+		zap.L().Debug("[DEBUG]get", zap.String("url", url), zap.Int("retry", retry), zap.Duration("interval", interval))
 	}
 
 	html, err := s.downloadHTML(url, retry, interval)
@@ -150,8 +145,7 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 	}
 
 	if debug {
-		log.Printf("[DEBUG]get - key:%s", key)
-		log.Printf("[DEBUG]get - html:%s", html)
+		zap.L().Debug("[DEBUG]get", zap.String("key", key), zap.String("html", html))
 	}
 
 	return s.actions(conf, ctx)
@@ -159,7 +153,6 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 
 // match 匹配
 func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
-
 	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
@@ -190,12 +183,13 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 	complied, err := regexp.Compile(pattern)
 	if err != nil {
-		return errors.Errorf("compile regex error: %+v", err)
+		zap.L().Error("compile regex failed", zap.Error(err), zap.String("pattern", pattern))
+		return err
 	}
 
 	groups := complied.FindAllStringSubmatch(input, -1)
 	if debug {
-		log.Printf("[DEBUG]match - groups:%d", len(groups))
+		zap.L().Debug("[DEBUG]match", zap.String("pattern", pattern), zap.Int("groups", len(groups)))
 	}
 
 	ch := make(chan bool, parallel)
@@ -203,36 +197,26 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 	wg.Add(len(groups))
 
 	for _, group := range groups {
-
 		if len(keys) != len(group)-1 {
-			return errors.Errorf("match keys len %d is not equal matches len %d", len(keys), len(group)-1)
+			return fmt.Errorf("match keys len %d is not equal matches len %d", len(keys), len(group)-1)
 		}
 
 		go func(_group []string) {
-
 			cloneContext := ctx.Clone()
 			for index, key := range keys {
 				err = cloneContext.Set(key, _group[index+1])
 				if err != nil {
-					err1, success := err.(*errors.Error)
-					if success {
-						log.Fatal(err1.ErrorStack())
-					}
-					log.Fatal(err)
+					zap.L().Fatal("set context failed", zap.Error(err), zap.String("key", key), zap.String("value", _group[index+1]))
 				}
 
 				if debug {
-					log.Printf("[DEBUG]match - %s:%s", key, _group[index+1])
+					zap.L().Debug("[DEBUG]match", zap.String("key", key), zap.String("value", _group[index+1]))
 				}
 			}
 
 			err = s.actions(conf, cloneContext)
 			if err != nil {
-				err1, success := err.(*errors.Error)
-				if success {
-					log.Fatal(err1.ErrorStack())
-				}
-				log.Fatal(err)
+				zap.L().Fatal("do action failed", zap.Error(err))
 			}
 
 			<-ch
@@ -249,7 +233,6 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 // forrange 循环
 func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
-
 	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
@@ -279,7 +262,7 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
-		log.Printf("[DEBUG]range - start:%d end:%d parallel:%d", start, end, parallel)
+		zap.L().Debug("[DEBUG]range", zap.Int("start", start), zap.Int("end", end), zap.Int("parallel", parallel))
 	}
 
 	ch := make(chan bool, parallel)
@@ -287,31 +270,21 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 	wg.Add(end - start + 1)
 
 	for index := start; index <= end; index++ {
-
 		go func(idx int) {
 
 			if debug {
-				log.Printf("[DEBUG]range - %s:%d", key, idx)
+				zap.L().Debug("[DEBUG]range", zap.String("key", key), zap.Int("index", idx))
 			}
 
 			_context := ctx.Clone()
-
 			err = _context.Set(key, fmt.Sprintf(format, idx))
 			if err != nil {
-				err1, success := err.(*errors.Error)
-				if success {
-					log.Fatal(err1.ErrorStack())
-				}
-				log.Fatal(err)
+				zap.L().Fatal("set context failed", zap.Error(err), zap.String("key", key), zap.String("value", fmt.Sprintf(format, idx)))
 			}
 
 			err = s.actions(conf, _context)
 			if err != nil {
-				err1, success := err.(*errors.Error)
-				if success {
-					log.Fatal(err1.ErrorStack())
-				}
-				log.Fatal(err)
+				zap.L().Fatal("do action failed", zap.Error(err))
 			}
 
 			<-ch
@@ -327,7 +300,6 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 
 // download 下载
 func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
-
 	parameters, err := conf.Config("parameters")
 	if err != nil {
 		return err
@@ -347,6 +319,7 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+	path = filepath.Join(*rootPath, path)
 
 	retry := parameters.IntDefault("retry", defaultRetry)
 	interval := parameters.DurationDefault("interval", defaultRetryInterval)
@@ -354,12 +327,26 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 	debug := parameters.BoolDefault("debug", defaultDebug)
 
 	if debug {
-		log.Printf("[DEBUG]download - url:%s referer:%s path:%s retry:%d interval:%s overwrite:%v", url, referer, path, retry, interval, overwrite)
+		zap.L().Debug("[DEBUG]download",
+			zap.String("url", url),
+			zap.String("referer", referer),
+			zap.String("path", path),
+			zap.Int("retry", retry),
+			zap.Duration("interval", interval),
+			zap.Bool("overwrite", overwrite))
 	}
 
 	err = s.downloadFile(url, referer, path, retry, interval, overwrite)
 	if err != nil {
-		log.Printf("download file failed due to %v", err)
+		zap.L().Error("download file failed",
+			zap.Error(err),
+			zap.String("url", url),
+			zap.String("referer", referer),
+			zap.String("path", path),
+			zap.Int("retry", retry),
+			zap.Duration("interval", interval),
+			zap.Bool("overwrite", overwrite))
+		return err
 	}
 
 	return nil
@@ -367,60 +354,33 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 // downloadHTML 下载html
 func (s Crawl) downloadHTML(url string, retry int, interval time.Duration) (string, error) {
-
 	var html string
 	var err error
-	var statusCode int
 	for times := retry - 1; times >= 0; times-- {
-
-		html, statusCode, err = s.tryDownloadHTML(url, retry, interval)
+		html, err = netop.GetString(url, netop.Retry(retry, interval))
 		if err == nil {
-			if statusCode == http.StatusNotFound {
-				return "", errors.Errorf("请求%s出错, 文件不存在", url)
-			}
-
 			break
 		}
 
 		if times == 0 {
-			return "", errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+			zap.L().Error("download html failed", zap.Error(err), zap.String("url", url), zap.Int("retry", retry))
+			return "", err
 		}
 
 		// 延时重试
-		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+		zap.L().Warn("try download html failed",
+			zap.Error(err),
+			zap.String("url", url),
+			zap.Int("retry", retry),
+			zap.Float64("interval", interval.Seconds()))
 		time.Sleep(interval)
 	}
 
 	return html, nil
 }
 
-// tryDownloadHTML 尝试下载html
-func (s Crawl) tryDownloadHTML(url string, retry int, interval time.Duration) (string, int, error) {
-
-	//	构造请求
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", 0, errors.New(err)
-	}
-
-	//	发送请求
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return "", 0, errors.New(err)
-	}
-	defer response.Body.Close()
-
-	buffer, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", 0, errors.New(err)
-	}
-
-	return string(buffer), response.StatusCode, nil
-}
-
 // downloadFile 下载文件
 func (s Crawl) downloadFile(url, referer, path string, retry int, interval time.Duration, overwrite bool) error {
-
 	notFoundPath := path + downloadNotFoundFileExt
 	if (s.isExists(path) || s.isExists(notFoundPath)) && !overwrite {
 		return nil
@@ -432,25 +392,30 @@ func (s Crawl) downloadFile(url, referer, path string, retry int, interval time.
 	}
 
 	downloadingPath := path + downloadingFileExt
-	for times := retry - 1; times >= 0; times-- {
 
+	for times := retry - 1; times >= 0; times-- {
 		statusCode, err := s.tryDownloadFile(url, referer, downloadingPath, retry, interval)
 		if err == nil {
-			log.Printf("[Download]\t%s --> %s", url, path)
+			zap.L().Info("[Download]", zap.String("url", url), zap.String("path", path))
 			return os.Rename(downloadingPath, path)
 		}
 
 		switch statusCode {
 		case http.StatusNotFound:
-			log.Printf("[Download]\t%s --> %s", url, notFoundPath)
+			zap.L().Info("[Download]", zap.String("url", url), zap.String("path", notFoundPath))
 			return os.Rename(downloadingPath, notFoundPath)
 		default:
 			if times == 0 {
-				return errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
+				zap.L().Error("download file failed", zap.Error(err), zap.String("url", url), zap.Int("retry", retry))
+				return err
 			}
 
 			// 延时重试
-			log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
+			zap.L().Warn("try download file failed",
+				zap.Error(err),
+				zap.String("url", url),
+				zap.Int("retry", retry),
+				zap.Float64("interval", interval.Seconds()))
 			time.Sleep(interval)
 		}
 	}
@@ -460,22 +425,15 @@ func (s Crawl) downloadFile(url, referer, path string, retry int, interval time.
 
 // tryDownloadFile 尝试下载文件
 func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval time.Duration) (int, error) {
-
-	//	构造请求
-	request, err := http.NewRequest("GET", url, nil)
+	response, err := netop.Get(url, netop.Refer(referer), netop.Retry(retry, interval))
 	if err != nil {
-		return 0, errors.New(err)
-	}
-
-	//	引用页
-	if referer != "" {
-		request.Header.Set("Referer", referer)
-	}
-
-	//	发送请求
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return 0, errors.New(err)
+		zap.L().Error("download bytes failed",
+			zap.String("url", url),
+			zap.String("referer", referer),
+			zap.String("path", path),
+			zap.Int("retry", retry),
+			zap.Duration("interval", interval))
+		return 0, nil
 	}
 	defer response.Body.Close()
 
@@ -485,13 +443,15 @@ func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval ti
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return 0, errors.New(err)
+		zap.L().Error("open download file failed", zap.Error(err), zap.String("path", path))
+		return 0, err
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, response.Body)
 	if err != nil {
-		return 0, errors.New(err)
+		zap.L().Error("write download file failed", zap.Error(err), zap.String("path", path))
+		return 0, err
 	}
 
 	return response.StatusCode, nil
@@ -499,7 +459,6 @@ func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval ti
 
 // ensureDir 保证目录存在
 func (s Crawl) ensureDir(dir string) error {
-
 	if s.isExists(dir) {
 		return nil
 	}
@@ -516,62 +475,26 @@ func (s Crawl) ensureDir(dir string) error {
 			return nil
 		}
 
-		return errors.New(err)
+		return err
 	}
 
 	return nil
 }
 
-// tryHTTPGet 尝试http请求
-func (s Crawl) tryHTTPGet(url string, retry int, interval time.Duration) (io.ReadCloser, error) {
-
-	//	构造请求
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, errors.New(err)
-	}
-
-	//	发送请求
-	var response *http.Response
-	for times := retry - 1; times >= 0; times-- {
-
-		response, err = http.DefaultClient.Do(request)
-		if err == nil {
-			break
-		}
-
-		if times == 0 {
-			return nil, errors.Errorf("请求%s出错，已重试%d次，不再重试:%s", url, retry, err.Error())
-		}
-
-		// 延时重试
-		log.Printf("请求%s出错，还有%d次重试机会，%d秒后重试: %s", url, times, int64(interval.Seconds()), err.Error())
-		time.Sleep(interval)
-	}
-
-	if response.StatusCode == http.StatusNotFound {
-		return nil, errors.Errorf("请求%s出错，文件不存在", url)
-	}
-
-	return response.Body, nil
-}
-
 // isExists 文件或目录是否存在
 func (s Crawl) isExists(path string) bool {
-
 	_, err := os.Stat(path)
 	return err == nil
 }
 
 // print 显示内容
 func (s Crawl) print(conf *config.Config, ctx *context.Context) error {
-
 	content, err := conf.StringParameter("parameters", ctx)
 	if err != nil {
 		return err
 	}
 
-	log.Print(content)
+	zap.L().Info(content)
 
 	return s.actions(conf, ctx)
 }

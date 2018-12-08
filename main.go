@@ -1,40 +1,38 @@
 package main
 
 import (
-	"log"
-	"os"
+	"flag"
+	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/nzai/crawl/config"
+	"go.uber.org/zap"
 )
 
-const (
-	defaultConfigFilePath = "config.json"
+var (
+	jobPath  = flag.String("job", "job.json", "job json file")
+	rootPath = flag.String("root", ".", "download root dir")
 )
 
 func main() {
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
 
-	filePath := defaultConfigFilePath
-	if len(os.Args) > 1 {
-		filePath = os.Args[1]
-	}
+	undo := zap.ReplaceGlobals(logger)
+	defer undo()
 
-	configs, err := config.OpenFile(filePath)
+	flag.Parse()
+
+	configs, err := config.OpenFile(*jobPath)
 	if err != nil {
-		err1, success := err.(*errors.Error)
-		if success {
-			log.Fatal(err1.ErrorStack())
-		}
-		log.Fatal(err)
+		zap.L().Fatal("read job file failed", zap.Error(err), zap.String("path", *jobPath))
 	}
 
+	start := time.Now()
 	crawl := NewCrawl()
 	err = crawl.Do(configs)
 	if err != nil {
-		err1, success := err.(*errors.Error)
-		if success {
-			log.Fatal(err1.ErrorStack())
-		}
-		log.Fatal(err)
+		zap.L().Fatal("crawl failed", zap.Error(err))
 	}
+
+	zap.L().Info("crawl success", zap.Duration("in", time.Now().Sub(start)))
 }
