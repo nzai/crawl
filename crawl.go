@@ -134,8 +134,9 @@ func (s Crawl) get(conf *config.Config, ctx *context.Context) error {
 		zap.L().Debug("[DEBUG]get", zap.String("url", url), zap.Int("retry", retry), zap.Duration("interval", interval))
 	}
 
-	html, err := s.downloadHTML(url, retry, interval)
+	html, err := netop.GetString(url, netop.Retry(retry, interval))
 	if err != nil {
+		zap.L().Error("download string failed", zap.Error(err), zap.String("url", url))
 		return err
 	}
 
@@ -338,45 +339,10 @@ func (s Crawl) download(conf *config.Config, ctx *context.Context) error {
 
 	err = s.downloadFile(url, referer, path, retry, interval, overwrite)
 	if err != nil {
-		zap.L().Error("download file failed",
-			zap.Error(err),
-			zap.String("url", url),
-			zap.String("referer", referer),
-			zap.String("path", path),
-			zap.Int("retry", retry),
-			zap.Duration("interval", interval),
-			zap.Bool("overwrite", overwrite))
 		return err
 	}
 
 	return nil
-}
-
-// downloadHTML 下载html
-func (s Crawl) downloadHTML(url string, retry int, interval time.Duration) (string, error) {
-	var html string
-	var err error
-	for times := retry - 1; times >= 0; times-- {
-		html, err = netop.GetString(url, netop.Retry(retry, interval))
-		if err == nil {
-			break
-		}
-
-		if times == 0 {
-			zap.L().Error("download html failed", zap.Error(err), zap.String("url", url), zap.Int("retry", retry))
-			return "", err
-		}
-
-		// 延时重试
-		zap.L().Warn("try download html failed",
-			zap.Error(err),
-			zap.String("url", url),
-			zap.Int("retry", retry),
-			zap.Float64("interval", interval.Seconds()))
-		time.Sleep(interval)
-	}
-
-	return html, nil
 }
 
 // downloadFile 下载文件
@@ -428,12 +394,13 @@ func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval ti
 	response, err := netop.Get(url, netop.Refer(referer), netop.Retry(retry, interval))
 	if err != nil {
 		zap.L().Error("download bytes failed",
+			zap.Error(err),
 			zap.String("url", url),
 			zap.String("referer", referer),
 			zap.String("path", path),
 			zap.Int("retry", retry),
 			zap.Duration("interval", interval))
-		return 0, nil
+		return 0, err
 	}
 	defer response.Body.Close()
 

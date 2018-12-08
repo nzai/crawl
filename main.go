@@ -14,7 +14,10 @@ var (
 )
 
 func main() {
-	logger, _ := zap.NewDevelopment()
+	c := zap.NewDevelopmentConfig()
+	c.DisableStacktrace = true
+
+	logger, _ := c.Build()
 	defer logger.Sync()
 
 	undo := zap.ReplaceGlobals(logger)
