@@ -24,7 +24,7 @@ const (
 	// defaultRetryInterval 缺省的重试间隔
 	defaultRetryInterval = time.Second * 5
 	// defaultParallel 缺省的并发数量(不并发)
-	defaultParallel = 1
+	defaultParallel = 0
 	// defaultDebug 缺省不调试
 	defaultDebug = false
 	// defaultOverwrite 缺省不覆盖
@@ -83,6 +83,9 @@ func (s Crawl) do(conf *config.Config, ctx *context.Context) error {
 	case "print":
 		// 显示
 		return s.print(conf, ctx)
+	case "string_replace":
+		// 字符串替换
+		return s.stringReplace(conf, ctx)
 	default:
 		return fmt.Errorf("unknown action type: %s", action)
 	}
@@ -464,4 +467,60 @@ func (s Crawl) print(conf *config.Config, ctx *context.Context) error {
 	zap.L().Info(content)
 
 	return s.actions(conf, ctx)
+}
+
+// match 匹配
+func (s Crawl) stringReplace(conf *config.Config, ctx *context.Context) error {
+	parameters, err := conf.Config("parameters")
+	if err != nil {
+		return err
+	}
+
+	key, err := parameters.String("key")
+	if err != nil {
+		return err
+	}
+
+	old, err := parameters.String("old")
+	if err != nil {
+		return err
+	}
+
+	new, err := parameters.String("new")
+	if err != nil {
+		return err
+	}
+
+	output, err := parameters.String("output")
+	if err != nil {
+		return err
+	}
+
+	input, err := ctx.Get(key)
+	if err != nil {
+		return err
+	}
+
+	debug := parameters.BoolDefault("debug", defaultDebug)
+	result := strings.Replace(input, old, new, -1)
+
+	err = ctx.Set(output, result)
+	if err != nil {
+		zap.L().Fatal("set context failed", zap.Error(err), zap.String("key", key), zap.String("value", result))
+	}
+
+	if debug {
+		zap.L().Debug("[DEBUG]string_replace",
+			zap.String("input", input),
+			zap.String("old", old),
+			zap.String("new", new),
+			zap.String("result", result))
+	}
+
+	err = s.actions(conf, ctx)
+	if err != nil {
+		zap.L().Fatal("do action failed", zap.Error(err))
+	}
+
+	return nil
 }
