@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/nzai/netop v0.1.1 h1:RkMZWoqKmeAq6SqybCGcbnc8aIrfpKymhI1ZJCEfRAA=
-github.com/nzai/netop v0.1.1/go.mod h1:2O9ZNoTMh3ZXqXC5jLkG0N+gCnMA2QlJswAnlxUwoUU=
+github.com/nzai/netop v0.2.6 h1:DWhQ3CMjtTaE1d266OhJ6f3F3sSSzctEVCL+05J0X0Y=
+github.com/nzai/netop v0.2.6/go.mod h1:2O9ZNoTMh3ZXqXC5jLkG0N+gCnMA2QlJswAnlxUwoUU=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

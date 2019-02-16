@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -363,68 +362,93 @@ func (s Crawl) downloadFile(url, referer, path string, retry int, interval time.
 	downloadingPath := path + downloadingFileExt
 
 	for times := retry - 1; times >= 0; times-- {
-		statusCode, err := s.tryDownloadFile(url, referer, downloadingPath, retry, interval)
+		err = s.tryDownloadFile(url, referer, downloadingPath, retry, interval)
 		if err == nil {
 			zap.L().Info("[Download]", zap.String("url", url), zap.String("path", path))
 			return os.Rename(downloadingPath, path)
 		}
 
-		switch statusCode {
-		case http.StatusNotFound:
+		if err == netop.ErrNotFound {
 			zap.L().Info("[Download]", zap.String("url", url), zap.String("path", notFoundPath))
 			return os.Rename(downloadingPath, notFoundPath)
-		default:
-			if times == 0 {
-				zap.L().Error("download file failed", zap.Error(err), zap.String("url", url), zap.Int("retry", retry))
-				return err
-			}
-
-			// 延时重试
-			zap.L().Warn("try download file failed",
-				zap.Error(err),
-				zap.String("url", url),
-				zap.Int("retry", retry),
-				zap.Float64("interval", interval.Seconds()))
-			time.Sleep(interval)
 		}
+
+		if times == 0 {
+			zap.L().Error("download file failed", zap.Error(err), zap.String("url", url), zap.Int("retry", retry))
+			return err
+		}
+
+		// 延时重试
+		zap.L().Warn("try download file failed",
+			zap.Error(err),
+			zap.String("url", url),
+			zap.Int("retry", retry),
+			zap.Float64("interval", interval.Seconds()))
+		time.Sleep(interval)
 	}
 
 	return nil
 }
 
 // tryDownloadFile 尝试下载文件
-func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval time.Duration) (int, error) {
-	response, err := netop.Get(url, netop.Refer(referer), netop.Retry(retry, interval))
+func (s Crawl) tryDownloadFile(url, referer, path string, retry int, interval time.Duration) error {
+	progressChannel := make(chan *netop.Progress, 64)
+	go func(ch <-chan *netop.Progress) {
+		for progress := range ch {
+			zap.L().Debug("download progress",
+				zap.String("total", s.parseSizeText(progress.Total)),
+				zap.String("completed", fmt.Sprintf("%s(%.1f%%)", s.parseSizeText(progress.Completed), float32(progress.Completed)*100/float32(progress.Total))),
+				zap.String("speed", s.parseSizeText(progress.Speed)+"/s"),
+				zap.Duration("elapsed", progress.Elapsed),
+				zap.Duration("remain", progress.Remain))
+		}
+	}(progressChannel)
+
+	buffer, err := netop.GetBuffer(url,
+		netop.Refer(referer),
+		netop.Retry(retry, interval),
+		netop.OnProgress(progressChannel, time.Second*10))
 	if err != nil {
-		zap.L().Error("download bytes failed",
+		zap.L().Error("download file failed",
 			zap.Error(err),
 			zap.String("url", url),
 			zap.String("referer", referer),
 			zap.String("path", path),
 			zap.Int("retry", retry),
 			zap.Duration("interval", interval))
-		return 0, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return response.StatusCode, fmt.Errorf("status code: %d  text: %s  url: %s  referer: %s", response.StatusCode, http.StatusText(response.StatusCode), url, referer)
+		return err
 	}
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		zap.L().Error("open download file failed", zap.Error(err), zap.String("path", path))
-		return 0, err
+		return err
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, response.Body)
+	_, err = io.Copy(file, buffer)
 	if err != nil {
 		zap.L().Error("write download file failed", zap.Error(err), zap.String("path", path))
-		return 0, err
+		return err
 	}
 
-	return response.StatusCode, nil
+	return nil
+}
+
+func (s Crawl) parseSizeText(speed int64) string {
+	if speed > 1073741824 {
+		return fmt.Sprintf("%.1f GB", float32(speed)/1073741824)
+	}
+
+	if speed > 1048576 {
+		return fmt.Sprintf("%.1f MB", float32(speed)/1048576)
+	}
+
+	if speed > 1024 {
+		return fmt.Sprintf("%.1f KB", float32(speed)/1024)
+	}
+
+	return fmt.Sprintf("%.1f B", float32(speed))
 }
 
 // ensureDir 保证目录存在

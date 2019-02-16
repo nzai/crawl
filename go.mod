@@ -2,7 +2,7 @@ module github.com/nzai/crawl
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/nzai/netop v0.1.1
+	github.com/nzai/netop v0.2.6
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/testify v1.2.2 // indirect
