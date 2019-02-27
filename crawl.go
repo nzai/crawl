@@ -219,7 +219,7 @@ func (s Crawl) match(conf *config.Config, ctx *context.Context) error {
 
 			err = s.actions(conf, cloneContext)
 			if err != nil {
-				zap.L().Fatal("do action failed", zap.Error(err))
+				zap.L().Error("do action failed", zap.Error(err))
 			}
 
 			<-ch
@@ -287,7 +287,7 @@ func (s Crawl) forrange(conf *config.Config, ctx *context.Context) error {
 
 			err = s.actions(conf, _context)
 			if err != nil {
-				zap.L().Fatal("do action failed", zap.Error(err))
+				zap.L().Error("do action failed", zap.Error(err))
 			}
 
 			<-ch
