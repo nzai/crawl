@@ -35,7 +35,7 @@ func main() {
 	ctx := jobs.NewContextFromEnv()
 
 	for _, job := range _jobs {
-		err = job.Do(ctx)
+		err = job.Execute(ctx)
 		if err != nil {
 			zap.L().Fatal("do job failed", zap.Error(err))
 		}

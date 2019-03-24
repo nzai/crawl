@@ -20,7 +20,7 @@ var (
 type Config map[string]interface{}
 
 // ReadFile read jobs from toml file
-func ReadFile(filePath string) ([]Job, error) {
+func ReadFile(filePath string) ([]*Job, error) {
 	_, err := os.Stat(filePath)
 	if err != nil {
 		zap.L().Error("file not found", zap.Error(err), zap.String("path", filePath))
@@ -42,7 +42,7 @@ func ReadFile(filePath string) ([]Job, error) {
 func (c Config) Get(key string) (interface{}, error) {
 	value, found := c[key]
 	if !found {
-		zap.L().Error("key not found", zap.String("key", key))
+		// zap.L().Error("key not found", zap.String("key", key))
 		return "", ErrKeyNotFound
 	}
 
@@ -82,13 +82,13 @@ func (c Config) Int(key string) (int, error) {
 		return 0, err
 	}
 
-	value, ok := v.(float64)
-	if !ok {
-		zap.L().Error("invalid value type", zap.String("key", key), zap.Any("value", v))
-		return 0, fmt.Errorf("key [%s] value %+v is not a int, type:%s", key, v, reflect.TypeOf(v))
+	int64Value, ok := v.(int64)
+	if ok {
+		return int(int64Value), nil
 	}
 
-	return int(value), nil
+	zap.L().Error("invalid value type", zap.String("key", key), zap.Any("value", v))
+	return 0, fmt.Errorf("key [%s] value %+v is not a int, type:%s", key, v, reflect.TypeOf(v))
 }
 
 // IntDefault get int value or default
@@ -180,9 +180,8 @@ func (c Config) Strings(key string) ([]string, error) {
 }
 
 // ToJobs parse config to jobs
-func (c Config) ToJobs() ([]Job, error) {
-	var jobs []Job
-	var job Job
+func (c Config) ToJobs() ([]*Job, error) {
+	var jobs []*Job
 	var err error
 	for key, value := range c {
 		c, ok := value.(map[string]interface{})
@@ -191,9 +190,12 @@ func (c Config) ToJobs() ([]Job, error) {
 		}
 
 		config := Config(c)
+		var action interface{}
 		switch key {
 		case "fetch":
-			job, err = NewFetch(&config)
+			action, err = newFetch(&config)
+		case "range":
+			action, err = newRange(&config)
 		default:
 			continue
 		}
@@ -202,7 +204,15 @@ func (c Config) ToJobs() ([]Job, error) {
 			return nil, err
 		}
 
-		jobs = append(jobs, job)
+		subJobs, err := config.ToJobs()
+		if err != nil {
+			return nil, err
+		}
+
+		jobs = append(jobs, &Job{
+			Action: action,
+			Jobs:   subJobs,
+		})
 	}
 
 	return jobs, nil
