@@ -26,6 +26,8 @@ func (s Job) Execute(ctx *Context) error {
 		return s.executeSingleContextAction(ctx)
 	case MultipleContextAction:
 		return s.executeMultipleContextAction(ctx)
+	case ConditionContextAction:
+		return s.executeConditionContextAction(ctx)
 	default:
 		zap.L().Error("invalid action", zap.String("type", reflect.TypeOf(s.Action).String()))
 		return ErrInvalidAction
@@ -78,6 +80,27 @@ func (s Job) executeMultipleContextAction(ctx *Context) error {
 		}
 
 		wg.Wait()
+	}
+
+	return nil
+}
+
+func (s Job) executeConditionContextAction(ctx *Context) error {
+	action := s.Action.(ConditionContextAction)
+	_continue, err := action.Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !_continue {
+		return nil
+	}
+
+	for _, job := range s.Jobs {
+		err = job.Execute(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

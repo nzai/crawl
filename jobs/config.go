@@ -225,6 +225,8 @@ func (c *Config) toJob(key string) (*Job, error) {
 		action, err = newExecute(c)
 	case "replace":
 		action, err = newReplace(c)
+	case "exists":
+		action, err = newExists(c)
 	default:
 		return nil, ErrInvalidAction
 	}

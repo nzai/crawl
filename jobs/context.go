@@ -3,7 +3,6 @@ package jobs
 import (
 	"os"
 	"strconv"
-	"strings"
 
 	"go.uber.org/zap"
 )
@@ -16,15 +15,15 @@ func NewContextFromEnv(root string) *Context {
 	ctx := Context(make(map[string]string))
 	ctx.Set("root", root)
 
-	lines := os.Environ()
-	for _, line := range lines {
-		index := strings.Index(line, "=")
-		if index < 0 {
-			continue
-		}
+	// lines := os.Environ()
+	// for _, line := range lines {
+	// 	index := strings.Index(line, "=")
+	// 	if index < 0 {
+	// 		continue
+	// 	}
 
-		ctx.Set(line[:index], line[index+1:])
-	}
+	// 	ctx.Set(line[:index], line[index+1:])
+	// }
 
 	return &ctx
 }

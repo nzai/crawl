@@ -9,3 +9,8 @@ type SingleContextAction interface {
 type MultipleContextAction interface {
 	Do(*Context) ([]*Context, error)
 }
+
+// ConditionContextAction action results condition context
+type ConditionContextAction interface {
+	Do(*Context) (bool, error)
+}
