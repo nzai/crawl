@@ -12,8 +12,9 @@ import (
 type Context map[string]string
 
 // NewContextFromEnv create context from env
-func NewContextFromEnv() *Context {
+func NewContextFromEnv(root string) *Context {
 	ctx := Context(make(map[string]string))
+	ctx.Set("root", root)
 
 	lines := os.Environ()
 	for _, line := range lines {

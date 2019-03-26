@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"time"
 
 	"github.com/nzai/crawl/jobs"
@@ -25,6 +26,19 @@ func main() {
 
 	flag.Parse()
 
+	if *rootPath == "." {
+		dir, err := os.Getwd()
+		if err != nil {
+			zap.L().Fatal("get current dir failed", zap.Error(err))
+		}
+
+		*rootPath = dir
+	}
+
+	zap.L().Info("arguments parse success",
+		zap.String("jobPath", *jobPath),
+		zap.String("rootPath", *rootPath))
+
 	start := time.Now()
 
 	_jobs, err := jobs.ReadFile(*jobPath)
@@ -32,7 +46,7 @@ func main() {
 		zap.L().Fatal("read job file failed", zap.Error(err), zap.String("path", *jobPath))
 	}
 
-	ctx := jobs.NewContextFromEnv()
+	ctx := jobs.NewContextFromEnv(*rootPath)
 
 	for _, job := range _jobs {
 		err = job.Execute(ctx)

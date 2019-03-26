@@ -182,38 +182,61 @@ func (c Config) Strings(key string) ([]string, error) {
 // ToJobs parse config to jobs
 func (c Config) ToJobs() ([]*Job, error) {
 	var jobs []*Job
-	var err error
 	for key, value := range c {
-		c, ok := value.(map[string]interface{})
-		if !ok {
+		object, ok := value.(map[string]interface{})
+		if ok {
+			config := Config(object)
+			job, err := config.toJob(key)
+			if err != nil {
+				return nil, err
+			}
+
+			jobs = append(jobs, job)
 			continue
 		}
 
-		config := Config(c)
-		var action interface{}
-		switch key {
-		case "fetch":
-			action, err = newFetch(&config)
-		case "range":
-			action, err = newRange(&config)
-		default:
-			continue
-		}
+		objects, ok := value.([]map[string]interface{})
+		if ok {
+			for _, object := range objects {
+				config := Config(object)
+				job, err := config.toJob(key)
+				if err != nil {
+					return nil, err
+				}
 
-		if err != nil {
-			return nil, err
+				jobs = append(jobs, job)
+			}
 		}
-
-		subJobs, err := config.ToJobs()
-		if err != nil {
-			return nil, err
-		}
-
-		jobs = append(jobs, &Job{
-			Action: action,
-			Jobs:   subJobs,
-		})
 	}
 
 	return jobs, nil
+}
+
+// ToJobs parse config to jobs
+func (c *Config) toJob(key string) (*Job, error) {
+	var err error
+	var action interface{}
+	switch key {
+	case "fetch":
+		action, err = newFetch(c)
+	case "range":
+		action, err = newRange(c)
+	case "execute":
+		action, err = newExecute(c)
+	case "replace":
+		action, err = newReplace(c)
+	default:
+		return nil, ErrInvalidAction
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	subJobs, err := c.ToJobs()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Job{Action: action, Jobs: subJobs}, nil
 }
