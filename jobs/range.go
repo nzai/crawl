@@ -37,6 +37,9 @@ func newRange(c *Config) (*Range, error) {
 	end := expression[pos+1:]
 
 	set, err := c.String("set")
+	if err != nil {
+		return nil, err
+	}
 
 	debug := c.BoolDefault("debug", false)
 

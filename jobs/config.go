@@ -227,6 +227,14 @@ func (c *Config) toJob(key string) (*Job, error) {
 		action, err = newReplace(c)
 	case "exists":
 		action, err = newExists(c)
+	case "list":
+		action, err = newList(c)
+	case "oss_exists":
+		action, err = newOssExists(c)
+	case "oss_upload":
+		action, err = newOssUpload(c)
+	case "oss_download":
+		action, err = newOssDownload(c)
 	default:
 		return nil, ErrInvalidAction
 	}
