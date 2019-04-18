@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
+            "name": "Launch crawl",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/main.go",
             "env": {},
-            "args": ["-job", "t1.toml"]
+            "args": ["/home/nzai/pp/crawl-jobs/itokoo_beautyleg_oss.toml"]
         }
     ]
 }

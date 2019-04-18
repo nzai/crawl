@@ -38,14 +38,20 @@ func newExists(c *Config) (*Exists, error) {
 func (s Exists) Do(ctx *Context) (bool, error) {
 	path := ctx.Expand(s.path)
 	_, err := os.Stat(path)
+	exists := err == nil
 
-	_continue := err == nil
+	_continue := exists
 	if !s.toContinue {
 		_continue = !_continue
 	}
 
 	if s.debug {
-		zap.L().Debug("exists",
+		status := "file exists"
+		if !exists {
+			status = "file not exists"
+		}
+
+		zap.L().Debug(status,
 			zap.String("path", path),
 			zap.Bool("exists", err == nil),
 			zap.Bool("continue", _continue))

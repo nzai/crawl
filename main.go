@@ -1,17 +1,12 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/nzai/crawl/jobs"
 	"go.uber.org/zap"
-)
-
-var (
-	jobPath  = flag.String("job", "job.toml", "job toml file")
-	rootPath = flag.String("root", ".", "download root dir")
 )
 
 func main() {
@@ -24,29 +19,30 @@ func main() {
 	undo := zap.ReplaceGlobals(logger)
 	defer undo()
 
-	flag.Parse()
-
-	if *rootPath == "." {
-		dir, err := os.Getwd()
-		if err != nil {
-			zap.L().Fatal("get current dir failed", zap.Error(err))
-		}
-
-		*rootPath = dir
+	if len(os.Args) < 2 {
+		fmt.Println("usage:\n\tcrawl your_job_config.toml")
+		os.Exit(1)
 	}
 
+	rootPath, err := os.Getwd()
+	if err != nil {
+		zap.L().Fatal("get current dir failed", zap.Error(err))
+	}
+
+	jobPath := os.Args[1]
+
 	zap.L().Info("arguments parse success",
-		zap.String("jobPath", *jobPath),
-		zap.String("rootPath", *rootPath))
+		zap.String("jobPath", jobPath),
+		zap.String("rootPath", rootPath))
 
 	start := time.Now()
 
-	_jobs, err := jobs.ReadFile(*jobPath)
+	_jobs, err := jobs.ReadFile(jobPath)
 	if err != nil {
-		zap.L().Fatal("read job file failed", zap.Error(err), zap.String("path", *jobPath))
+		zap.L().Fatal("read job file failed", zap.Error(err), zap.String("path", jobPath))
 	}
 
-	ctx := jobs.NewContextFromEnv(*rootPath)
+	ctx := jobs.NewContextFromEnv(rootPath)
 
 	for _, job := range _jobs {
 		err = job.Execute(ctx)

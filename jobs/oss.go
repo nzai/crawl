@@ -97,7 +97,12 @@ func (s OssExists) Do(ctx *Context) (bool, error) {
 	}
 
 	if s.debug {
-		zap.L().Debug("aliyun oss object exists",
+		status := "aliyun oss object exists"
+		if !exists {
+			status = "aliyun oss object not exists"
+		}
+
+		zap.L().Debug(status,
 			zap.String("bucket", s.bucket),
 			zap.String("key", key),
 			zap.Bool("continue", _continue))

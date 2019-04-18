@@ -12,7 +12,8 @@ type List struct {
 	path      string
 	pattern   string
 	recursive bool
-	set       string
+	pathSet   string
+	nameSet   string
 	parallel  int
 	files     []string
 	debug     bool
@@ -31,7 +32,13 @@ func newList(c *Config) (*List, error) {
 	}
 
 	recursive := c.BoolDefault("recursive", false)
-	set, err := c.String("set")
+
+	pathSet, err := c.String("path_set")
+	if err != nil {
+		return nil, err
+	}
+
+	nameSet, err := c.String("name_set")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +51,8 @@ func newList(c *Config) (*List, error) {
 		path:      path,
 		pattern:   pattern,
 		recursive: recursive,
-		set:       set,
+		pathSet:   pathSet,
+		nameSet:   nameSet,
 		parallel:  parallel,
 		debug:     debug,
 	}, nil
@@ -67,7 +75,8 @@ func (s List) Do(ctx *Context) ([]*Context, error) {
 	ctxs := make([]*Context, len(s.files))
 	for index, file := range s.files {
 		cloneCtx := ctx.Clone()
-		cloneCtx.Set(s.set, file)
+		cloneCtx.Set(s.pathSet, file)
+		cloneCtx.Set(s.nameSet, filepath.Base(file))
 
 		ctxs[index] = cloneCtx
 	}
@@ -75,7 +84,7 @@ func (s List) Do(ctx *Context) ([]*Context, error) {
 	return ctxs, nil
 }
 
-func (s List) glob(dir string) error {
+func (s *List) glob(dir string) error {
 	files, err := filepath.Glob(filepath.Join(s.path, s.pattern))
 	if err != nil {
 		zap.L().Warn("glob dir failed",
@@ -95,7 +104,7 @@ func (s List) glob(dir string) error {
 	return nil
 }
 
-func (s List) work(dir string) error {
+func (s *List) work(dir string) error {
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			zap.L().Warn("walk dir failed",
