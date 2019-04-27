@@ -16,7 +16,7 @@ type Execute struct {
 }
 
 // newExecute create execute action
-func newExecute(c *Config) (*Execute, error) {
+func newExecute(c *Config) (interface{}, error) {
 	command, err := c.String("command")
 	if err != nil {
 		return nil, err

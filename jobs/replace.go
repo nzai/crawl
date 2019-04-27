@@ -16,7 +16,7 @@ type Replace struct {
 }
 
 // newReplace create replace action
-func newReplace(c *Config) (*Replace, error) {
+func newReplace(c *Config) (interface{}, error) {
 	expression, err := c.String("expression")
 	if err != nil {
 		return nil, err

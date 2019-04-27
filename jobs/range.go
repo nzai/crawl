@@ -22,7 +22,7 @@ type Range struct {
 }
 
 // newRange create range action
-func newRange(c *Config) (*Range, error) {
+func newRange(c *Config) (interface{}, error) {
 	expression, err := c.String("expression")
 	if err != nil {
 		return nil, err

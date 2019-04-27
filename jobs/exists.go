@@ -14,7 +14,7 @@ type Exists struct {
 }
 
 // newExists create exists action
-func newExists(c *Config) (*Exists, error) {
+func newExists(c *Config) (interface{}, error) {
 	path, err := c.String("path")
 	if err != nil {
 		return nil, err

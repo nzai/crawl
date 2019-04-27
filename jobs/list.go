@@ -20,7 +20,7 @@ type List struct {
 }
 
 // newList create list action
-func newList(c *Config) (*List, error) {
+func newList(c *Config) (interface{}, error) {
 	path, err := c.String("path")
 	if err != nil {
 		return nil, err

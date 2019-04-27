@@ -27,7 +27,7 @@ type Fetch struct {
 }
 
 // newFetch create fetch action
-func newFetch(c *Config) (*Fetch, error) {
+func newFetch(c *Config) (interface{}, error) {
 	url, err := c.String("url")
 	if err != nil {
 		return nil, err

@@ -17,7 +17,7 @@ type OssExists struct {
 }
 
 // newOssExists create ossExists action
-func newOssExists(c *Config) (*OssExists, error) {
+func newOssExists(c *Config) (interface{}, error) {
 	endPoint, err := c.String("endpoint")
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ type OssUpload struct {
 }
 
 // newOssUpload create ossUpload action
-func newOssUpload(c *Config) (*OssUpload, error) {
+func newOssUpload(c *Config) (interface{}, error) {
 	path, err := c.String("path")
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ type OssDownload struct {
 }
 
 // newOssDownload create ossDownload action
-func newOssDownload(c *Config) (*OssDownload, error) {
+func newOssDownload(c *Config) (interface{}, error) {
 	path, err := c.String("path")
 	if err != nil {
 		return nil, err

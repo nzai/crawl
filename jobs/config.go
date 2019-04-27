@@ -186,12 +186,14 @@ func (c Config) ToJobs() ([]*Job, error) {
 		object, ok := value.(map[string]interface{})
 		if ok {
 			config := Config(object)
-			job, err := config.toJob(key)
+			job, err := c.toJob(key, &config)
 			if err != nil {
 				return nil, err
 			}
 
-			jobs = append(jobs, job)
+			if job != nil {
+				jobs = append(jobs, job)
+			}
 			continue
 		}
 
@@ -199,12 +201,14 @@ func (c Config) ToJobs() ([]*Job, error) {
 		if ok {
 			for _, object := range objects {
 				config := Config(object)
-				job, err := config.toJob(key)
+				job, err := c.toJob(key, &config)
 				if err != nil {
 					return nil, err
 				}
 
-				jobs = append(jobs, job)
+				if job != nil {
+					jobs = append(jobs, job)
+				}
 			}
 		}
 	}
@@ -213,32 +217,37 @@ func (c Config) ToJobs() ([]*Job, error) {
 }
 
 // ToJobs parse config to jobs
-func (c *Config) toJob(key string) (*Job, error) {
-	var err error
-	var action interface{}
+func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 	switch key {
 	case "fetch":
-		action, err = newFetch(c)
+		return conf.toConditionJob(newFetch, (*c)["fetch_else"])
 	case "range":
-		action, err = newRange(c)
+		return conf.toSequenceJob(newRange)
 	case "execute":
-		action, err = newExecute(c)
+		return conf.toSequenceJob(newExecute)
 	case "replace":
-		action, err = newReplace(c)
+		return conf.toSequenceJob(newReplace)
 	case "exists":
-		action, err = newExists(c)
+		return conf.toConditionJob(newExists, (*c)["exists_else"])
 	case "list":
-		action, err = newList(c)
+		return conf.toSequenceJob(newList)
 	case "oss_exists":
-		action, err = newOssExists(c)
+		return conf.toConditionJob(newOssExists, nil)
 	case "oss_upload":
-		action, err = newOssUpload(c)
+		return conf.toSequenceJob(newOssUpload)
 	case "oss_download":
-		action, err = newOssDownload(c)
+		return conf.toSequenceJob(newOssDownload)
+	case "fetch_else", "exists_else":
+		return nil, nil
 	default:
+		zap.L().Error("invalid action", zap.String("action", key))
 		return nil, ErrInvalidAction
 	}
+}
 
+// ToJtoElseJobobs parse config to else jobs
+func (c *Config) toSequenceJob(fun func(c *Config) (interface{}, error)) (*Job, error) {
+	action, err := fun(c)
 	if err != nil {
 		return nil, err
 	}
@@ -249,4 +258,34 @@ func (c *Config) toJob(key string) (*Job, error) {
 	}
 
 	return &Job{Action: action, Jobs: subJobs}, nil
+}
+
+// toConditionJob parse config to else jobs
+func (c *Config) toConditionJob(fun func(*Config) (interface{}, error), elseValue interface{}) (*Job, error) {
+	action, err := fun(c)
+	if err != nil {
+		return nil, err
+	}
+
+	subJobs, err := c.ToJobs()
+	if err != nil {
+		return nil, err
+	}
+
+	if elseValue == nil {
+		return &Job{Action: action, Jobs: subJobs}, nil
+	}
+
+	object, ok := elseValue.(map[string]interface{})
+	if !ok {
+		return &Job{Action: action, Jobs: subJobs}, nil
+	}
+
+	config := Config(object)
+	elseJobs, err := config.ToJobs()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Job{Action: action, Jobs: subJobs, ElseJobs: elseJobs}, nil
 }

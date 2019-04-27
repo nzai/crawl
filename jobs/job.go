@@ -15,8 +15,9 @@ var (
 
 // Job crawl job
 type Job struct {
-	Action interface{}
-	Jobs   []*Job
+	Action   interface{}
+	Jobs     []*Job
+	ElseJobs []*Job
 }
 
 // Execute execute job
@@ -58,6 +59,17 @@ func (s Job) executeMultipleContextAction(ctx *Context) error {
 		return err
 	}
 
+	if len(ctxs) == 0 {
+		for _, job := range s.ElseJobs {
+			err = job.Execute(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
 	parallel := ctx.IntDefault("parallel", 0)
 
 	for _, job := range s.Jobs {
@@ -93,6 +105,13 @@ func (s Job) executeConditionContextAction(ctx *Context) error {
 	}
 
 	if !_continue {
+		for _, job := range s.ElseJobs {
+			err = job.Execute(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	}
 
@@ -104,4 +123,19 @@ func (s Job) executeConditionContextAction(ctx *Context) error {
 	}
 
 	return nil
+}
+
+// SingleContextAction action results single context
+type SingleContextAction interface {
+	Do(*Context) error
+}
+
+// MultipleContextAction action results multiple contexts
+type MultipleContextAction interface {
+	Do(*Context) ([]*Context, error)
+}
+
+// ConditionContextAction action results condition context
+type ConditionContextAction interface {
+	Do(*Context) (bool, error)
 }
