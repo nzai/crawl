@@ -66,7 +66,6 @@ func (s Execute) Do(ctx *Context) error {
 		if !ok {
 			zap.L().Error("execute command failed",
 				zap.Error(err),
-				// zap.ByteString("output", output),
 				zap.String("command", s.command),
 				zap.Strings("args", args))
 			return err
@@ -74,7 +73,7 @@ func (s Execute) Do(ctx *Context) error {
 
 		zap.L().Error("execute command failed",
 			zap.Error(ee),
-			// zap.ByteString("output", output),
+			zap.ByteString("stderr", ee.Stderr),
 			zap.String("command", s.command),
 			zap.Strings("args", args))
 		return err

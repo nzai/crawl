@@ -81,7 +81,9 @@ func (s Job) executeMultipleContextAction(ctx *Context) error {
 			go func(c *Context) {
 				err = job.Execute(c)
 				if err != nil {
-					zap.L().Error("do job failed", zap.Error(err))
+					zap.L().Fatal("do job failed",
+						zap.Error(err),
+						zap.Any("action", job.Action))
 				}
 
 				<-ch
