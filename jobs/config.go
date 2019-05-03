@@ -221,6 +221,8 @@ func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 	switch key {
 	case "fetch":
 		return conf.toConditionJob(newFetch, (*c)["fetch_else"])
+	case "match":
+		return conf.toConditionJob(newMatch, (*c)["match_else"])
 	case "range":
 		return conf.toSequenceJob(newRange)
 	case "execute":
@@ -231,13 +233,15 @@ func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 		return conf.toConditionJob(newExists, (*c)["exists_else"])
 	case "list":
 		return conf.toSequenceJob(newList)
+	case "list_dir":
+		return conf.toSequenceJob(newListDir)
 	case "oss_exists":
 		return conf.toConditionJob(newOssExists, nil)
 	case "oss_upload":
 		return conf.toSequenceJob(newOssUpload)
 	case "oss_download":
 		return conf.toSequenceJob(newOssDownload)
-	case "fetch_else", "exists_else":
+	case "fetch_else", "match_else", "exists_else":
 		return nil, nil
 	default:
 		zap.L().Error("invalid action", zap.String("action", key))
