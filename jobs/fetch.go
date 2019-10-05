@@ -19,6 +19,7 @@ var (
 // Fetch http get html and match regexp
 type Fetch struct {
 	url           string
+	headers       map[string]string
 	retry         int
 	retryInterval time.Duration
 	regexp        *regexp.Regexp
@@ -32,6 +33,8 @@ func newFetch(c *Config) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	headers := c.MapDefault("headers")
 
 	retry := c.IntDefault("retry", constants.DefaultRetry)
 	retryInterval := c.DurationDefault("interval", constants.DefaultRetryInterval)
@@ -58,6 +61,7 @@ func newFetch(c *Config) (interface{}, error) {
 
 	return &Fetch{
 		url:           url,
+		headers:       headers,
 		retry:         retry,
 		retryInterval: retryInterval,
 		regexp:        regex,
@@ -78,18 +82,24 @@ func (s Fetch) Do(ctx *Context) ([]*Context, error) {
 
 func (s Fetch) getHTML(ctx *Context) (string, error) {
 	url := ctx.Expand(s.url)
+	parameters := []netop.RequestParam{netop.Retry(s.retry, s.retryInterval)}
+	for key, value := range s.headers {
+		parameters = append(parameters, netop.Header(key, ctx.Expand(value)))
+	}
 
-	html, err := netop.GetString(url, netop.Retry(s.retry, s.retryInterval))
+	html, err := netop.GetString(url, parameters...)
 	if err != nil {
 		zap.L().Error("get html string failed",
 			zap.Error(err),
-			zap.String("url", url))
+			zap.String("url", url),
+			zap.Any("headers", s.headers))
 		return "", err
 	}
 
 	if s.debug {
 		zap.L().Debug("get html success",
-			zap.String("url", url))
+			zap.String("url", url),
+			zap.Any("headers", s.headers))
 	}
 
 	return html, nil
@@ -101,6 +111,10 @@ func (s Fetch) match(ctx *Context, html string) ([]*Context, error) {
 		zap.L().Debug("match html success",
 			zap.String("expression", s.regexp.String()),
 			zap.Int("matches", len(groups)))
+
+		if len(groups) == 0 {
+			zap.L().Debug("find 0 match", zap.String("html", html))
+		}
 	}
 
 	ctxs := make([]*Context, len(groups))

@@ -179,6 +179,38 @@ func (c Config) Strings(key string) ([]string, error) {
 	return values, nil
 }
 
+// Map get map
+func (c Config) Map(key string) (map[string]string, error) {
+	v, err := c.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	value, ok := v.(map[string]interface{})
+	if !ok {
+		zap.L().Error("invalid value type", zap.String("key", key), zap.Any("value", v))
+		return nil, fmt.Errorf("key [%s] value %+v is not a map", key, v)
+	}
+
+	m := make(map[string]string, len(value))
+	for k, v := range value {
+		str, _ := v.(string)
+		m[k] = str
+	}
+
+	return m, nil
+}
+
+// MapDefault get map or default
+func (c Config) MapDefault(key string) map[string]string {
+	value, err := c.Map(key)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	return value
+}
+
 // ToJobs parse config to jobs
 func (c Config) ToJobs() ([]*Job, error) {
 	var jobs []*Job
@@ -241,7 +273,7 @@ func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 		return conf.toSequenceJob(newOssUpload)
 	case "oss_download":
 		return conf.toSequenceJob(newOssDownload)
-	case "fetch_else", "match_else", "exists_else":
+	case "fetch_else", "match_else", "exists_else", "headers":
 		return nil, nil
 	default:
 		zap.L().Error("invalid action", zap.String("action", key))
