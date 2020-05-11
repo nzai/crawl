@@ -273,6 +273,12 @@ func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 		return conf.toSequenceJob(newOssUpload)
 	case "oss_download":
 		return conf.toSequenceJob(newOssDownload)
+	case "cos_exists":
+		return conf.toConditionJob(newCosExists, nil)
+	case "cos_upload":
+		return conf.toSequenceJob(newCosUpload)
+	case "cos_download":
+		return conf.toSequenceJob(newCosDownload)
 	case "fetch_else", "match_else", "exists_else", "headers":
 		return nil, nil
 	default:
