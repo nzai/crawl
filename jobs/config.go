@@ -287,7 +287,7 @@ func (c *Config) toJob(key string, conf *Config) (*Job, error) {
 	}
 }
 
-// ToJtoElseJobobs parse config to else jobs
+// toSequenceJob parse config to else jobs
 func (c *Config) toSequenceJob(fun func(c *Config) (interface{}, error)) (*Job, error) {
 	action, err := fun(c)
 	if err != nil {
